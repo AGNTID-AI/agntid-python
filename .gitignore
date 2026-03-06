@@ -1,0 +1,18 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+dist/
+build/
+.venv/
+venv/
+*.log
+
+# Secrets and local config (do not commit)
+.env
+.env.*
+.env.local
+*.pem
+*.key
+secrets/
