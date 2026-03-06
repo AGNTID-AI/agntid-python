@@ -11,7 +11,7 @@ Works with any agent framework. First-class support for **Microsoft Semantic Ker
 > **Status:** This SDK is currently in **alpha** and may evolve as the AgntID runtime stabilizes. We welcome feedback from early adopters.
 
 <p align="center">
-  <img src="docs/architecture-flow.svg" alt="Architecture: Agent Framework → AgntID Python SDK → AgntID Runtime → MCP Tool Servers" width="320"/>
+  <img src="https://raw.githubusercontent.com/AGNTID-AI/agntid-python/main/docs/architecture-flow.svg" alt="Architecture: Agent Framework → AgntID Python SDK → AgntID Runtime → MCP Tool Servers" width="320"/>
 </p>
 
 **Architecture** — Your agent runs in your app and talks to the AgntID Python SDK; the SDK connects to the AgntID Runtime (MCP proxy + policy engine); the runtime forwards allowed tool calls to MCP tool servers.
