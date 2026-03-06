@@ -73,21 +73,21 @@ pip install -e ".[dev,mcp,msk]"
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for the full development setup.
 
-### Releases (soon)
+### Releases
 
-The repo currently has **no GitHub Releases**. Once CI is in place, we will publish versioned releases with wheels, for example:
+Versioned releases with wheels are published on [GitHub Releases](https://github.com/AGNTID-AI/agntid-python/releases). For example:
 
 | Release   | Wheel |
 |-----------|--------|
 | **v0.1.0** | `agntid_sdk-0.1.0-py3-none-any.whl` |
 
-Then you can install a specific version with:
+Install a specific version:
 
 ```bash
 pip install https://github.com/AGNTID-AI/agntid-python/releases/download/v0.1.0/agntid_sdk-0.1.0-py3-none-any.whl
 ```
 
-Until then, use **Install from source** or **Editable install** above.
+Or use **Install from source** / **Editable install** for the latest from `main`.
 
 ---
 
@@ -169,14 +169,10 @@ Requires `pip install agntid-sdk[msk]`.
 
 ## Build
 
-Build sdist and wheel:
+Build sdist and wheel (from the repo root):
 
 ```bash
-# From the SDK directory
 make build
-
-# Or from the repo root (also builds Docker images)
-make sdk-build
 ```
 
 Artifacts are placed in `dist/`. The version is read from `pyproject.toml`.
@@ -184,10 +180,10 @@ Artifacts are placed in `dist/`. The version is read from `pyproject.toml`.
 Other targets:
 
 ```bash
-make sdk-version   # print current version
-make sdk-test      # run unit tests
-make sdk-clean     # remove build artifacts
-make sdk-install   # install editable with dev extras
+make version      # print current version
+make test         # run unit tests
+make clean        # remove build artifacts
+make install-dev  # install editable with dev extras
 ```
 
 ---
@@ -195,7 +191,7 @@ make sdk-install   # install editable with dev extras
 ## Project structure
 
 ```
-packages/agntid-sdk/
+agntid-python/        # repo root
   src/agntid/
     __init__.py      # Public API + __version__
     client.py        # AgntidMCPClient, get_tools_list
@@ -213,7 +209,7 @@ packages/agntid-sdk/
     unit/
     integration/
   pyproject.toml     # Package metadata, deps, build config
-  Makefile           # build, test, clean, install targets
+  Makefile           # build, test, clean, install-dev targets
   LICENSE            # MIT
   CHANGELOG.md       # Release history
 ```
