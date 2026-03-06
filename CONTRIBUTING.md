@@ -57,4 +57,56 @@ Thank you for your interest in contributing. This document gives a short overvie
 
 If you have questions that don’t fit an issue or PR, you can reach out via the contact details on [agntid.ai](https://agntid.ai).
 
+## Creating a release
+
+### Test the release (GitHub only)
+
+You can test the release workflow without PyPI:
+
+1. Ensure the release workflow and version are committed and pushed to `main`.
+2. Create and push a tag (e.g. first release):
+   ```bash
+   git tag v0.1.0
+   git push origin v0.1.0
+   ```
+3. Open **Actions** on the repo and watch the **Release** workflow run. The **Publish to PyPI** step may show as failed (red) if `PYPI_API_TOKEN` is not set — that’s expected; the job still succeeds.
+4. Open **Releases** — you should see **v0.1.0** with the wheel and sdist attached. Install with:
+   ```bash
+   pip install https://github.com/AGNTID-AI/agntid-python/releases/download/v0.1.0/agntid_sdk-0.1.0-py3-none-any.whl
+   ```
+
+### Cut a release
+
+Maintainers: to publish a release (e.g. v0.1.0), ensure the version in `pyproject.toml` and `src/agntid/__init__.py` is updated, then push a tag:
+
+```bash
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+The [Release workflow](.github/workflows/release.yml) will:
+
+1. Build the wheel and sdist
+2. **Publish to PyPI** (if `PYPI_API_TOKEN` is set; see below)
+3. Create a GitHub Release and attach the built artifacts
+
+Users can then install with:
+
+```bash
+# From PyPI (after the first release and once PyPI is configured)
+pip install agntid-sdk
+
+# Or from GitHub Release
+pip install https://github.com/AGNTID-AI/agntid-python/releases/download/v0.1.0/agntid_sdk-0.1.0-py3-none-any.whl
+```
+
+### Publishing to PyPI
+
+1. Reserve the project name on PyPI if needed: the package is published as `agntid-sdk` (see `pyproject.toml`). Create the project at [pypi.org](https://pypi.org) so the name is yours.
+2. Create a PyPI account at [pypi.org](https://pypi.org/account/register/) (and [test.pypi.org](https://test.pypi.org/) for testing).
+3. Create an API token: [pypi.org/manage/account/token](https://pypi.org/manage/account/token/) (scope: entire account or just this project).
+4. Add the token as a repository secret in this repo: **Settings → Secrets and variables → Actions → New repository secret** → name `PYPI_API_TOKEN`, value = the token.
+
+After that, each release (tag push) will upload the package to PyPI. If `PYPI_API_TOKEN` is not set, the PyPI upload will fail; the workflow still completes and creates the GitHub Release.
+
 Thanks for contributing.

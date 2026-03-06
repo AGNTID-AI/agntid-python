@@ -26,7 +26,7 @@ dependencies = []
 
 [project.urls]
 Homepage = "https://agntid.ai"
-Repository = "https://github.com/agntid/agntid-sdk"
+Repository = "https://github.com/AGNTID-AI/agntid-python"
 Documentation = "https://docs.agntid.ai"
 
 [project.optional-dependencies]
