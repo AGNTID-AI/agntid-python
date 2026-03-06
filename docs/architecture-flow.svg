@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280 250" font-family="system-ui, -apple-system, sans-serif">
+  <defs>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#0b1b2b" flood-opacity="0.08"/>
+    </filter>
+  </defs>
+  <rect width="280" height="250" fill="none"/>
+  <!-- Agent Framework -->
+  <rect x="40" y="10" width="200" height="44" rx="8" fill="#2563eb" filter="url(#shadow)"/>
+  <text x="140" y="32" text-anchor="middle" font-size="13" font-weight="700" fill="#fff">Agent Framework</text>
+  <text x="140" y="46" text-anchor="middle" font-size="10" fill="#bfdbfe">OpenAI, MSK, etc.</text>
+  <!-- Arrow -->
+  <line x1="140" y1="54" x2="140" y2="72" stroke="#64748b" stroke-width="2" stroke-dasharray="4 2"/>
+  <polygon points="135,68 145,68 140,76" fill="#64748b"/>
+  <!-- AgntID Python SDK -->
+  <rect x="40" y="74" width="200" height="44" rx="8" fill="#0284c7" filter="url(#shadow)"/>
+  <text x="140" y="96" text-anchor="middle" font-size="13" font-weight="700" fill="#fff">AgntID Python SDK</text>
+  <text x="140" y="110" text-anchor="middle" font-size="10" fill="#bae6fd">Task lifecycle ù Tool wrapping</text>
+  <!-- Arrow -->
+  <line x1="140" y2="118" x2="140" y2="136" stroke="#64748b" stroke-width="2" stroke-dasharray="4 2"/>
+  <polygon points="135,132 145,132 140,140" fill="#64748b"/>
+  <!-- AgntID Runtime -->
+  <rect x="40" y="138" width="200" height="44" rx="8" fill="#0ea5a4" filter="url(#shadow)"/>
+  <text x="140" y="160" text-anchor="middle" font-size="13" font-weight="700" fill="#fff">AgntID Runtime</text>
+  <text x="140" y="174" text-anchor="middle" font-size="10" fill="#99f6e4">MCP proxy ù Policy engine</text>
+  <!-- Arrow -->
+  <line x1="140" y1="182" x2="140" y2="198" stroke="#64748b" stroke-width="2" stroke-dasharray="4 2"/>
+  <polygon points="135,194 145,194 140,202" fill="#64748b"/>
+  <!-- MCP Tool Servers -->
+  <rect x="40" y="202" width="200" height="40" rx="8" fill="#6366f1" filter="url(#shadow)"/>
+  <text x="140" y="222" text-anchor="middle" font-size="13" font-weight="700" fill="#fff">MCP Tool Servers</text>
+  <text x="140" y="235" text-anchor="middle" font-size="10" fill="#c7d2fe">Filesystem, S3, APIs, etc.</text>
+</svg>

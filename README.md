@@ -8,11 +8,21 @@ AgntID task-glue SDK for Python. Connects your AI agent to the AgntID MCP proxy 
 
 Works with any agent framework. First-class support for **Microsoft Semantic Kernel (MSK)** and **FastMCP**.
 
+> **Status:** This SDK is currently in **alpha** and may evolve as the AgntID runtime stabilizes. We welcome feedback from early adopters.
+
+<p align="center">
+  <img src="docs/architecture-flow.svg" alt="Architecture: Agent Framework → AgntID Python SDK → AgntID Runtime → MCP Tool Servers" width="320"/>
+</p>
+
+**Architecture** — Your agent runs in your app and talks to the AgntID Python SDK; the SDK connects to the AgntID Runtime (MCP proxy + policy engine); the runtime forwards allowed tool calls to MCP tool servers.
+
 ---
 
-## Install
+## Installation
 
 Requires **Python 3.10+**.
+
+### Install from PyPI
 
 ```bash
 # Core SDK (no framework extras)
@@ -25,12 +35,59 @@ pip install "agntid-sdk[mcp]"
 pip install "agntid-sdk[msk]"
 ```
 
-**From the monorepo** (editable / development):
+### Install from release
+
+Install a specific release wheel from GitHub:
 
 ```bash
-cd packages/agntid-sdk
-pip install -e ".[dev,msk]"
+pip install https://github.com/AGNTID-AI/agntid-python/releases/download/v0.1.0/agntid_sdk-0.1.0-py3-none-any.whl
 ```
+
+Replace `v0.1.0` and the wheel filename with the [release](https://github.com/AGNTID-AI/agntid-python/releases) you want. For extras (e.g. MCP or MSK), install dependencies separately or use “Install from source” with extras.
+
+### Install from source
+
+Install the latest from the main branch:
+
+```bash
+pip install git+https://github.com/AGNTID-AI/agntid-python.git
+```
+
+With extras (MCP, MSK, or dev):
+
+```bash
+pip install "agntid-sdk[mcp] @ git+https://github.com/AGNTID-AI/agntid-python.git"
+pip install "agntid-sdk[msk] @ git+https://github.com/AGNTID-AI/agntid-python.git"
+pip install -e ".[dev,mcp,msk]"   # editable clone (see CONTRIBUTING.md)
+```
+
+### Editable install (development)
+
+From a clone of this repo:
+
+```bash
+git clone https://github.com/AGNTID-AI/agntid-python.git
+cd agntid-python
+pip install -e ".[dev,mcp,msk]"
+```
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the full development setup.
+
+### Releases (soon)
+
+The repo currently has **no GitHub Releases**. Once CI is in place, we will publish versioned releases with wheels, for example:
+
+| Release   | Wheel |
+|-----------|--------|
+| **v0.1.0** | `agntid_sdk-0.1.0-py3-none-any.whl` |
+
+Then you can install a specific version with:
+
+```bash
+pip install https://github.com/AGNTID-AI/agntid-python/releases/download/v0.1.0/agntid_sdk-0.1.0-py3-none-any.whl
+```
+
+Until then, use **Install from source** or **Editable install** above.
 
 ---
 
