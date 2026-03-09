@@ -1,0 +1,84 @@
+# AgntID Runtime — Customer Compose File
+# Used for quick start download (https://raw.githubusercontent.com/AGNTID-AI/agntid-python/main/docker-compose.yml).
+# Synced from AGNTID_CORE/customer/runtime-compose.yml when that file changes.
+#
+# Prerequisites:
+#   1. Docker v20.10+ and Docker Compose v2+
+#   2. docker login registry.agntid.ai  (use your agntid.ai portal credentials)
+#   3. A bootstrap token (generate at https://agntid.ai → Runtime → Bootstrap Tokens)
+#
+# Usage:
+#   docker compose up -d
+#
+# After startup, open http://localhost:8080 and enter your bootstrap token.
+#
+# Intent parser: first start downloads the ML model (~90 MB) into the intent-parser-model
+# volume; subsequent starts use the cache. Allow 1–2 minutes for first-time healthy.
+# Version: 0.0.1
+
+services:
+  achr-runtime:
+    image: registry.agntid.ai/achr-runtime:0.0.1
+    container_name: achr-runtime
+    restart: unless-stopped
+    ports:
+      - "${RUNTIME_PORT:-8080}:8080"
+      - "${MCP_PORT:-8082}:8000"
+    volumes:
+      - runtime-config:/config
+      - runtime-data:/data
+      - runtime-logs:/logs
+    environment:
+      - RUSE_ENV=production
+      - RUSE_LOG_LEVEL=${LOG_LEVEL:-info}
+      - RUSE_AGENID_ENDPOINT=https://runtime.agntid.ai
+      - RUSE_SERVER_PORT=8080
+      - RUSE_STORAGE_PATH=/data/ruse.db
+      - RUSE_MCP_ENABLED=true
+      - RUSE_MCP_TRANSPORT=http
+      - RUSE_MCP_PORT=8000
+      - RUSE_MCP_EXTERNAL_PORT=${MCP_PORT:-8082}
+      - RUSE_MCP_HOST=0.0.0.0
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    depends_on:
+      achr-intent-parser:
+        condition: service_healthy
+
+  achr-intent-parser:
+    image: registry.agntid.ai/achr-intent-parser:0.0.1
+    container_name: achr-intent-parser
+    restart: unless-stopped
+    stop_grace_period: 600s
+    ports:
+      - "${INTENT_PARSER_PORT:-8002}:8000"
+    volumes:
+      - intent-parser-model:/app/model-cache
+    environment:
+      - HF_HOME=/app/model-cache
+      - MODEL_NAME=all-MiniLM-L6-v2
+      - PORT=8000
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 300s
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: "0.5"
+        reservations:
+          memory: 512M
+          cpus: "0.25"
+
+volumes:
+  runtime-config:
+  runtime-data:
+  runtime-logs:
+  intent-parser-model:
