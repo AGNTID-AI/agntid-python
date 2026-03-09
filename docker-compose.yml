@@ -31,7 +31,7 @@ services:
     environment:
       - RUSE_ENV=production
       - RUSE_LOG_LEVEL=${LOG_LEVEL:-info}
-      - RUSE_AGENID_ENDPOINT=https://runtime.agntid.ai
+      - RUSE_AGENID_ENDPOINT=https://runtime.agntid.ai:8443
       - RUSE_SERVER_PORT=8080
       - RUSE_STORAGE_PATH=/data/ruse.db
       - RUSE_MCP_ENABLED=true
