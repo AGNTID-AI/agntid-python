@@ -2,7 +2,7 @@
 
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)](https://www.python.org)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.1.0-orange)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.1.1-orange)](CHANGELOG.md)
 
 AgntID task-glue SDK for Python. Connects your AI agent to the AgntID MCP proxy so the platform can **correlate every tool call to the correct user prompt** and enforce **policy, audit, and guardrails** — with minimal code changes.
 
@@ -25,25 +25,20 @@ Requires **Python 3.10+**.
 ### Install from PyPI
 
 ```bash
-# Core SDK (no framework extras)
 pip install agntid-sdk
-
-# With MCP client transport (AgntidMCPClient)
-pip install "agntid-sdk[mcp]"
-
-# With Microsoft Semantic Kernel integration
-pip install "agntid-sdk[msk]"
 ```
+
+All dependencies (fastmcp, mcp, openai, semantic-kernel, rich, fastapi) are included.
 
 ### Install from release
 
 Install a specific release wheel from GitHub:
 
 ```bash
-pip install https://github.com/AGNTID-AI/agntid-python/releases/download/v0.1.0/agntid_sdk-0.1.0-py3-none-any.whl
+pip install https://github.com/AGNTID-AI/agntid-python/releases/download/v0.1.1/agntid_sdk-0.1.1-py3-none-any.whl
 ```
 
-Replace `v0.1.0` and the wheel filename with the [release](https://github.com/AGNTID-AI/agntid-python/releases) you want. For extras (e.g. MCP or MSK), install dependencies separately or use “Install from source” with extras.
+Replace `v0.1.1` and the wheel filename with the [release](https://github.com/AGNTID-AI/agntid-python/releases) you want. The core SDK (with MCP transport) is included. For extras (e.g. MSK or OpenAI), install dependencies separately or use “Install from source” with extras.
 
 ### Install from source
 
@@ -53,12 +48,10 @@ Install the latest from the main branch:
 pip install git+https://github.com/AGNTID-AI/agntid-python.git
 ```
 
-With extras (MCP, MSK, or dev):
+With dev extras:
 
 ```bash
-pip install "agntid-sdk[mcp] @ git+https://github.com/AGNTID-AI/agntid-python.git"
-pip install "agntid-sdk[msk] @ git+https://github.com/AGNTID-AI/agntid-python.git"
-pip install -e ".[dev,mcp,msk]"   # editable clone (see CONTRIBUTING.md)
+pip install -e ".[dev]"   # editable clone (see CONTRIBUTING.md)
 ```
 
 ### Editable install (development)
@@ -68,7 +61,7 @@ From a clone of this repo:
 ```bash
 git clone https://github.com/AGNTID-AI/agntid-python.git
 cd agntid-python
-pip install -e ".[dev,mcp,msk]"
+pip install -e ".[dev]"
 ```
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for the full development setup.
@@ -79,12 +72,12 @@ Versioned releases with wheels are published on [GitHub Releases](https://github
 
 | Release   | Wheel |
 |-----------|--------|
-| **v0.1.0** | `agntid_sdk-0.1.0-py3-none-any.whl` |
+| **v0.1.1** | `agntid_sdk-0.1.1-py3-none-any.whl` |
 
 Install a specific version:
 
 ```bash
-pip install https://github.com/AGNTID-AI/agntid-python/releases/download/v0.1.0/agntid_sdk-0.1.0-py3-none-any.whl
+pip install https://github.com/AGNTID-AI/agntid-python/releases/download/v0.1.1/agntid_sdk-0.1.1-py3-none-any.whl
 ```
 
 Or use **Install from source** / **Editable install** for the latest from `main`.
@@ -152,6 +145,13 @@ python msk_demo.py --help
 | `agntid.get_tools_list(client)` | Lists tools from any MCP client |
 | `agntid.get_last_denial(clear=True)` | Returns the last policy/task denial (if any) |
 | `agntid.format_denial(denial)` | Formats a denial dict into a human-readable string |
+| `agntid.print_result(result, tool_name=...)` | Rich-formatted result output |
+| `agntid.print_denial(denial)` | Rich-formatted denial panel |
+| `agntid.print_tools(tools, exclude=...)` | Rich-formatted tool list table |
+| `agntid.print_connected(url, tool_count=...)` | Connection success banner |
+| `agntid.print_error(msg)` | Error panel |
+| `agntid.ToolResult` | Dict subclass; auto-renders with rich on `print()` |
+| `agntid.DenialResult` | Denial wrapper; falsy; auto-renders with rich on `print()` |
 | `agntid.require_env(*names)` | Checks required environment variables |
 | `agntid.format_tools_display(tools, exclude)` | Formats tool list for display |
 | `agntid.__version__` | SDK version string |
@@ -163,7 +163,7 @@ python msk_demo.py --help
 | `agntid.msk.create_plugin_from_mcp_tools(wrapped, tools, ...)` | Builds an MSK kernel plugin from MCP tools |
 | `agntid.msk.agent_id_from_agent(agent)` | Derives agent ID from an MSK agent |
 
-Requires `pip install agntid-sdk[msk]`.
+Included in the core SDK.
 
 ---
 
@@ -196,6 +196,7 @@ agntid-python/        # repo root
     __init__.py      # Public API + __version__
     client.py        # AgntidMCPClient, get_tools_list
     denial.py        # Denial parsing and formatting (framework-agnostic)
+    display.py       # Rich-formatted output (ToolResult, DenialResult, print helpers)
     mcp_wrapper.py   # wrap_client — task_id injection, field stripping
     task.py          # Task lifecycle: create, open, close, context manager
     util.py          # require_env, format_tools_display

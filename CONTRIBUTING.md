@@ -66,22 +66,22 @@ You can test the release workflow without PyPI:
 1. Ensure the release workflow and version are committed and pushed to `main`.
 2. Create and push a tag (e.g. first release):
    ```bash
-   git tag v0.1.0
-   git push origin v0.1.0
+   git tag v0.1.1
+   git push origin v0.1.1
    ```
 3. Open **Actions** on the repo and watch the **Release** workflow run. The **Publish to PyPI** step may show as failed (red) if `PYPI_API_TOKEN` is not set — that’s expected; the job still succeeds.
-4. Open **Releases** — you should see **v0.1.0** with the wheel and sdist attached. Install with:
+4. Open **Releases** — you should see **v0.1.1** with the wheel and sdist attached. Install with:
    ```bash
-   pip install https://github.com/AGNTID-AI/agntid-python/releases/download/v0.1.0/agntid_sdk-0.1.0-py3-none-any.whl
+   pip install https://github.com/AGNTID-AI/agntid-python/releases/download/v0.1.1/agntid_sdk-0.1.1-py3-none-any.whl
    ```
 
 ### Cut a release
 
-Maintainers: to publish a release (e.g. v0.1.0), ensure the version in `pyproject.toml` and `src/agntid/__init__.py` is updated, then push a tag:
+Maintainers: to publish a release (e.g. v0.1.1), ensure the version in `pyproject.toml` and `src/agntid/__init__.py` is updated, then push a tag:
 
 ```bash
-git tag v0.1.0
-git push origin v0.1.0
+git tag v0.1.1
+git push origin v0.1.1
 ```
 
 The [Release workflow](.github/workflows/release.yml) will:
@@ -97,7 +97,7 @@ Users can then install with:
 pip install agntid-sdk
 
 # Or from GitHub Release
-pip install https://github.com/AGNTID-AI/agntid-python/releases/download/v0.1.0/agntid_sdk-0.1.0-py3-none-any.whl
+pip install https://github.com/AGNTID-AI/agntid-python/releases/download/v0.1.1/agntid_sdk-0.1.1-py3-none-any.whl
 ```
 
 ### Publishing to PyPI

@@ -1,9 +1,20 @@
 # AgntID task glue SDK — task metadata and MCP wrapper for agent frameworks.
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 
 from agntid.client import AgntidMCPClient, get_tools_list
 from agntid.denial import format_denial, get_last_denial
+from agntid.display import (
+    DenialResult,
+    ToolResult,
+    ToolResultScalar,
+    print_connected,
+    print_denial,
+    print_error,
+    print_result,
+    print_task_opened,
+    print_tools,
+)
 from agntid.mcp_wrapper import wrap_client
 from agntid.task import (
     TASK_CLOSE_TOOL,
@@ -38,5 +49,14 @@ __all__ = [
     "format_denial",
     "get_last_denial",
     "get_tools_list",
+    "ToolResult",
+    "ToolResultScalar",
+    "DenialResult",
+    "print_result",
+    "print_denial",
+    "print_tools",
+    "print_connected",
+    "print_task_opened",
+    "print_error",
     "msk",
 ]

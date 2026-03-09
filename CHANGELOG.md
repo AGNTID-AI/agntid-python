@@ -4,6 +4,22 @@ All notable changes to the `agntid-sdk` package are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.1] - 2026-03-09
+
+### Added
+- Rich-formatted display module (`display.py`) with `ToolResult`, `ToolResultScalar`, `DenialResult`.
+- `print(result)` auto-renders with rich colours for tool results and denials.
+- New display functions: `print_result`, `print_denial`, `print_tools`, `print_connected`, `print_task_opened`, `print_error`.
+- `rich` as an explicit core dependency.
+
+### Changed
+- All dependencies (fastapi, fastmcp, mcp, openai, semantic-kernel, rich) are now core — no optional extras needed.
+- `call_tool_async` returns `DenialResult` on policy denial instead of raising `ToolError`.
+- `strip_platform_fields` handles `CallToolResult` objects and extracts `__agntid_result`.
+
+### Fixed
+- Empty `dependencies = []` caused `pip install` to skip all dependencies.
+
 ## [0.1.0] - 2026-02-11
 
 ### Added
