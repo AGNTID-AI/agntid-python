@@ -10,6 +10,9 @@
 # Usage:
 #   docker compose up -d
 #
+# Optional: run a second runtime on the same host with different public ports:
+#   RUNTIME_PORT=18081 MCP_PORT=18082 docker compose -p agntid-runtime-2 up -d
+#
 # After startup, open http://localhost:8080 and enter your bootstrap token.
 #
 # Intent parser: first start downloads the ML model (~90 MB) into the intent-parser-model
@@ -19,7 +22,6 @@
 services:
   achr-runtime:
     image: registry.agntid.ai/achr-runtime:0.0.1
-    container_name: achr-runtime
     restart: unless-stopped
     ports:
       - "${RUNTIME_PORT:-8080}:8080"
@@ -39,6 +41,8 @@ services:
       - RUSE_MCP_PORT=8000
       - RUSE_MCP_EXTERNAL_PORT=${MCP_PORT:-8082}
       - RUSE_MCP_HOST=0.0.0.0
+      - INTENT_PARSER_V2_CLASSIFY_URL=http://achr-intent-parser:8000
+      - INTENT_PARSER_V2_CLASSIFY_TIMEOUT_MS=${INTENT_PARSER_V2_CLASSIFY_TIMEOUT_MS:-10000}
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
       interval: 30s
@@ -51,16 +55,15 @@ services:
 
   achr-intent-parser:
     image: registry.agntid.ai/achr-intent-parser:0.0.1
-    container_name: achr-intent-parser
     restart: unless-stopped
     stop_grace_period: 600s
-    ports:
-      - "${INTENT_PARSER_PORT:-8002}:8000"
+    expose:
+      - "8000"
     volumes:
       - intent-parser-model:/app/model-cache
     environment:
       - HF_HOME=/app/model-cache
-      - MODEL_NAME=all-MiniLM-L6-v2
+      - NLI_MODEL_NAME=cross-encoder/nli-deberta-v3-base
       - PORT=8000
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
