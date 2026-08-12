@@ -1,6 +1,6 @@
 # AgntID task glue SDK — task metadata and MCP wrapper for agent frameworks.
 
-__version__ = "0.1.1"
+__version__ = "0.2.0"
 
 from agntid.client import AgntidMCPClient, get_tools_list
 from agntid.denial import format_denial, get_last_denial
@@ -16,16 +16,31 @@ from agntid.display import (
     print_tools,
 )
 from agntid.mcp_wrapper import wrap_client
+from agntid.context import (
+    ApprovalEvidence,
+    ConversationContext,
+    DelegatedIntent,
+    DelegationContext,
+    ExecutionContext,
+    FrameworkInfo,
+    extract_explicit_constraints,
+)
 from agntid.task import (
+    DELEGATION_CLOSE_TOOL,
+    DELEGATION_OPEN_TOOL,
     TASK_CLOSE_TOOL,
     TASK_OPEN_TOOL,
     close_task,
     create_task,
     parse_task_open_result,
+    delegation_open_arguments,
     send_task_close,
+    send_delegation_close,
+    send_delegation_open,
     send_task_open,
     send_task_open_checked,
     task_context,
+    task_open_arguments,
 )
 from agntid.util import format_tools_display, require_env
 
@@ -44,6 +59,19 @@ __all__ = [
     "task_context",
     "TASK_OPEN_TOOL",
     "TASK_CLOSE_TOOL",
+    "DELEGATION_OPEN_TOOL",
+    "DELEGATION_CLOSE_TOOL",
+    "send_delegation_open",
+    "send_delegation_close",
+    "task_open_arguments",
+    "delegation_open_arguments",
+    "FrameworkInfo",
+    "ConversationContext",
+    "ExecutionContext",
+    "DelegatedIntent",
+    "ApprovalEvidence",
+    "DelegationContext",
+    "extract_explicit_constraints",
     "require_env",
     "format_tools_display",
     "format_denial",

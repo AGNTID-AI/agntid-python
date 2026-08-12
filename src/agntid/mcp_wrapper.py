@@ -79,7 +79,14 @@ def strip_platform_fields(obj: Any) -> Any:
 T = TypeVar("T")
 
 
-def wrap_client(client: T, task_id: str | None = None) -> T:
+def wrap_client(
+    client: T,
+    task_id: str | None = None,
+    delegation_id: str | None = None,
+    *,
+    task_argument: str = "_task_id",
+    delegation_argument: str = "_delegation_id",
+) -> T:
     """
     Wrap an MCP client so that every tool call includes _task_id and responses
     have __agntid_* fields stripped. Returns an object that implements the same
@@ -96,30 +103,63 @@ def wrap_client(client: T, task_id: str | None = None) -> T:
     :param task_id: Optional initial task ID; default None. Set via set_task_id() if not provided.
     :returns: A wrapped instance; use it for all tool calls in this run.
     """
-    return _WrappedClient(client, task_id)
+    return _WrappedClient(
+        client,
+        task_id,
+        delegation_id,
+        task_argument=task_argument,
+        delegation_argument=delegation_argument,
+    )
 
 
 class _WrappedClient:
     """Wraps an MCP client to add _task_id to tool calls and strip __agntid_* from responses."""
 
-    __slots__ = ("_client", "_task_id")
+    __slots__ = (
+        "_client",
+        "_task_id",
+        "_delegation_id",
+        "_task_argument",
+        "_delegation_argument",
+    )
 
-    def __init__(self, client: Any, task_id: str | None = None) -> None:
+    def __init__(
+        self,
+        client: Any,
+        task_id: str | None = None,
+        delegation_id: str | None = None,
+        *,
+        task_argument: str = "_task_id",
+        delegation_argument: str = "_delegation_id",
+    ) -> None:
         self._client = client
         self._task_id = task_id
+        self._delegation_id = delegation_id
+        self._task_argument = task_argument
+        self._delegation_argument = delegation_argument
 
     def set_task_id(self, task_id: str) -> None:
         """Update the task_id used for subsequent tool calls (e.g. for per-prompt tasks)."""
         self._task_id = task_id
+
+    def set_delegation_id(self, delegation_id: str | None) -> None:
+        """Select or clear the child delegation for subsequent tool calls."""
+        self._delegation_id = delegation_id
+
+    def _inject_context(self, arguments: dict[str, Any] | None) -> dict[str, Any]:
+        args = dict(arguments) if arguments is not None else {}
+        if self._task_id is not None:
+            args[self._task_argument] = self._task_id
+        if self._delegation_id is not None:
+            args[self._delegation_argument] = self._delegation_id
+        return args
 
     def __getattr__(self, name: str) -> Any:
         return getattr(self._client, name)
 
     def call_tool(self, name: str, arguments: dict[str, Any] | None = None, **kwargs: Any) -> Any:
         """Call a tool with _task_id injected into arguments; strip __agntid_* from response."""
-        args = dict(arguments) if arguments is not None else {}
-        if self._task_id is not None:
-            args["_task_id"] = self._task_id
+        args = self._inject_context(arguments)
         try:
             result = self._client.call_tool(name, args, **kwargs)
         except BaseException as e:
@@ -130,9 +170,7 @@ class _WrappedClient:
 
     async def call_tool_async(self, name: str, arguments: dict[str, Any] | None = None, **kwargs: Any) -> Any:
         """Async tool call with _task_id and response stripping."""
-        args = dict(arguments) if arguments is not None else {}
-        if self._task_id is not None:
-            args["_task_id"] = self._task_id
+        args = self._inject_context(arguments)
         try:
             client = self._client
             if hasattr(client, "call_tool_async"):

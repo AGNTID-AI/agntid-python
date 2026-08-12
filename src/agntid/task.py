@@ -8,7 +8,7 @@ Use task_context for automatic task_close on exit.
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
-from typing import Any, Callable
+from typing import Any, Callable, Mapping
 
 from agntid.client import call_tool_async
 from agntid._platform import (
@@ -16,15 +16,50 @@ from agntid._platform import (
     build_task_close_tool_call,
     build_task_open_notification,
     build_task_open_tool_call,
+    build_delegation_open_arguments,
     generate_task_id,
 )
 
 # Tool names for task open/close when using tools/call (spec 037)
 TASK_OPEN_TOOL = "agntid_task_open"
 TASK_CLOSE_TOOL = "agntid_task_close"
+DELEGATION_OPEN_TOOL = "agntid_delegation_open"
+DELEGATION_CLOSE_TOOL = "agntid_delegation_close"
 
 # Type for sender: accepts a JSON-RPC message (dict) and sends it to the platform.
 TaskSender = Callable[[dict[str, Any]], Any]
+
+
+def task_open_arguments(
+    task_id: str,
+    agent_id: str,
+    user_id: str,
+    prompt: str,
+    *,
+    execution_context: Any | None = None,
+) -> dict[str, Any]:
+    """Build the public task-open argument object used by any MCP client."""
+    arguments = {
+        "task_id": task_id,
+        "agent_id": agent_id.strip(),
+        "user_id": user_id.strip(),
+        "prompt": prompt.strip() if isinstance(prompt, str) else str(prompt),
+    }
+    if execution_context is not None:
+        arguments["execution_context"] = (
+            execution_context.to_dict()
+            if hasattr(execution_context, "to_dict")
+            else dict(execution_context)
+        )
+    return arguments
+
+
+def delegation_open_arguments(
+    task_id: str,
+    delegation_context: Any,
+) -> dict[str, Any]:
+    """Build the public delegation-open argument object used by any MCP client."""
+    return build_delegation_open_arguments(task_id, delegation_context)
 
 
 async def send_task_open(
@@ -33,6 +68,8 @@ async def send_task_open(
     agent_id: str,
     user_id: str,
     prompt: str,
+    *,
+    execution_context: Any | None = None,
 ) -> Any:
     """
     Send task open to the runtime over an MCP client (tools/call agntid_task_open).
@@ -44,7 +81,13 @@ async def send_task_open(
     return await call_tool_async(
         client,
         TASK_OPEN_TOOL,
-        {"task_id": task_id, "agent_id": agent_id.strip(), "user_id": user_id.strip(), "prompt": prompt.strip() if isinstance(prompt, str) else str(prompt)},
+        task_open_arguments(
+            task_id,
+            agent_id,
+            user_id,
+            prompt,
+            execution_context=execution_context,
+        ),
     )
 
 
@@ -80,6 +123,8 @@ async def send_task_open_checked(
     agent_id: str,
     user_id: str,
     prompt: str,
+    *,
+    execution_context: Any | None = None,
 ) -> tuple[bool, str]:
     """
     Send task open and return a simple (ok, message) for the caller to handle.
@@ -87,8 +132,41 @@ async def send_task_open_checked(
     :param client: MCP client with call_tool or call_tool_async.
     :returns: (ok, message) — ok is False if task open was rejected; message is the reason.
     """
-    result = await send_task_open(client, task_id, agent_id, user_id, prompt)
+    result = await send_task_open(
+        client,
+        task_id,
+        agent_id,
+        user_id,
+        prompt,
+        execution_context=execution_context,
+    )
     return parse_task_open_result(result)
+
+
+async def send_delegation_open(
+    client: Any,
+    task_id: str,
+    delegation_context: Any,
+) -> Any:
+    """Open one canonical framework delegation below an existing root task."""
+    return await call_tool_async(
+        client,
+        DELEGATION_OPEN_TOOL,
+        delegation_open_arguments(task_id, delegation_context),
+    )
+
+
+async def send_delegation_close(
+    client: Any,
+    task_id: str,
+    delegation_id: str,
+) -> Any:
+    """Close one delegation without closing the root task."""
+    return await call_tool_async(
+        client,
+        DELEGATION_CLOSE_TOOL,
+        {"task_id": task_id, "delegation_id": delegation_id},
+    )
 
 
 @asynccontextmanager
@@ -115,6 +193,7 @@ def create_task(
     *,
     sender: TaskSender | None = None,
     use_tool_call: bool = True,
+    execution_context: Mapping[str, Any] | Any | None = None,
 ) -> str:
     """
     Create (open) a task and return a new task_id. Sends task open to the platform.
@@ -144,9 +223,21 @@ def create_task(
     if sender is not None:
         prompt_str = prompt.strip() if isinstance(prompt, str) else str(prompt)
         if use_tool_call:
-            msg = build_task_open_tool_call(task_id, agent_id.strip(), user_id.strip(), prompt_str)
+            msg = build_task_open_tool_call(
+                task_id,
+                agent_id.strip(),
+                user_id.strip(),
+                prompt_str,
+                execution_context,
+            )
         else:
-            msg = build_task_open_notification(task_id, agent_id.strip(), user_id.strip(), prompt_str)
+            msg = build_task_open_notification(
+                task_id,
+                agent_id.strip(),
+                user_id.strip(),
+                prompt_str,
+                execution_context,
+            )
         sender(msg)
     return task_id
 

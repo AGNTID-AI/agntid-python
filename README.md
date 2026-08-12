@@ -1,8 +1,12 @@
 # agntid-sdk
 
+Framework integrations share one canonical task and delegation contract. Install
+only the framework extra you use (for example, `agntid-sdk[msk]`); the base SDK
+and the LangChain Deep Agents adapter do not import a framework package.
+
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)](https://www.python.org)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.1.1-orange)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.2.0-orange)](CHANGELOG.md)
 
 AgntID task-glue SDK for Python. Connects your AI agent to the AgntID MCP proxy so the platform can **correlate every tool call to the correct user prompt** and enforce **policy, audit, and guardrails** — with minimal code changes.
 
