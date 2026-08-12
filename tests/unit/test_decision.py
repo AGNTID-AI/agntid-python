@@ -18,6 +18,7 @@ def _exception():
                 "verdict_code": "APPROVAL_REQUIRED",
                 "review": {
                     "review_id": "review-123",
+                    "operation_id": "operation-123",
                     "outcome": "review_required",
                     "status": "pending",
                     "resolution_code": "APPROVAL_REQUIRED",
@@ -36,6 +37,7 @@ def test_typed_review_decision_is_preserved():
     assert decision.waiting_for_review
     assert decision.review is not None
     assert decision.review.status is ReviewStatus.PENDING
+    assert decision.review.operation_id == "operation-123"
     assert decision.review.approval_source == "framework_interrupt"
 
 

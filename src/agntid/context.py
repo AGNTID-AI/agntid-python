@@ -242,6 +242,7 @@ class ApprovalEvidence:
     decision: str = ""
     approver_id: str = ""
     decision_id: str = ""
+    operation_id: str = ""
     source: str = ""
     tool_name: str = ""
     arguments_digest: str = ""
@@ -254,6 +255,7 @@ class ApprovalEvidence:
             "decision": self.decision,
             "approver_id": self.approver_id,
             "decision_id": self.decision_id,
+            "operation_id": self.operation_id,
             "source": self.source,
             "tool_name": self.tool_name,
             "arguments_digest": self.arguments_digest,
@@ -269,6 +271,7 @@ class ApprovalEvidence:
             decision=str(data.get("decision") or ""),
             approver_id=str(data.get("approver_id") or ""),
             decision_id=str(data.get("decision_id") or ""),
+            operation_id=str(data.get("operation_id") or ""),
             source=str(data.get("source") or ""),
             tool_name=str(data.get("tool_name") or ""),
             arguments_digest=str(data.get("arguments_digest") or ""),

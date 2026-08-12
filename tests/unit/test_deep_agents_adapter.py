@@ -142,6 +142,7 @@ def test_delegated_framework_approval_is_bound_to_canonical_call():
             "required": True,
             "decision": "approved",
             "decision_id": "approval-1",
+            "operation_id": "operation-1",
             "approver_id": "alice",
             "expires_at": "2026-08-12T08:05:00Z",
         },
@@ -158,5 +159,6 @@ def test_delegated_framework_approval_is_bound_to_canonical_call():
 
     assert proposal is not None
     assert proposal.approval["source"] == "framework_interrupt"
+    assert proposal.approval["operation_id"] == "operation-1"
     assert proposal.approval["tool_name"] == "notifications.send"
     assert proposal.approval["arguments_digest"] == arguments_digest(args)

@@ -25,6 +25,7 @@ class ReviewStatus(str, Enum):
 @dataclass(frozen=True)
 class ReviewDecision:
     review_id: str
+    operation_id: str
     outcome: DecisionOutcome
     status: ReviewStatus
     resolution_code: str
@@ -48,6 +49,7 @@ class ReviewDecision:
             status = ReviewStatus.PENDING
         return cls(
             review_id=str(data.get("review_id") or ""),
+            operation_id=str(data.get("operation_id") or data.get("correlation_id") or ""),
             outcome=_outcome(data.get("outcome")),
             status=status,
             resolution_code=str(data.get("resolution_code") or ""),
