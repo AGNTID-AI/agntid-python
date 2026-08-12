@@ -6,7 +6,7 @@ so installing the base SDK does not pull a framework into other integrations.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any
 from uuid import NAMESPACE_URL, uuid5
 
@@ -19,6 +19,7 @@ from agntid.context import (
     ExecutionContext,
     FrameworkInfo,
     extract_explicit_constraints,
+    arguments_digest,
 )
 
 FRAMEWORK_NAME = "langchain-deep-agents"
@@ -65,6 +66,8 @@ class DeepAgentsAdapter:
         delegation=True,
         approval_events=True,
         compound_intent=True,
+        execution_plan=True,
+        framework_delegation_events=True,
     )
 
     def execution_context(
@@ -121,6 +124,7 @@ class DeepAgentsAdapter:
                     getattr(event, "entity_references", {}) or {}
                 ),
             ),
+            execution_plan=getattr(event, "execution_plan", None),
             extensions=extensions,
         )
 
@@ -130,6 +134,80 @@ class DeepAgentsAdapter:
         if not isinstance(event, dict):
             raise TypeError("delegation event must be a mapping")
         return DelegationContext.from_mapping(event)
+
+    def delegation_for_task_call(
+        self,
+        *,
+        subagent_type: str,
+        description: str,
+        tool_call_id: str,
+        context: Any,
+    ) -> DelegationProposal:
+        """Translate an observed Deep Agents ``task`` call before tools run.
+
+        This is intentionally separate from ``delegation_for_request`` so a
+        reasoning-only, interrupted, or failed subagent is still observable.
+        """
+        policies = getattr(context, "delegation_policies", {}) or {}
+        policy = policies.get(subagent_type)
+        if policy is None:
+            raise RuntimeError(
+                f"Deep Agent {subagent_type!r} has no trusted AgentID delegation policy."
+            )
+        delegated_text = str(description or "").strip()
+        if not delegated_text:
+            raise RuntimeError("Deep Agents task calls require a delegated description.")
+        cache_key = f"{subagent_type}\x1f{delegated_text}"
+        task_id = str(getattr(context, "task_id"))
+        canonical = DelegationContext(
+            delegation_id=str(uuid5(NAMESPACE_URL, f"agntid:{task_id}:{cache_key}")),
+            parent_agent_id=str(getattr(context, "agent_id")),
+            acting_agent_id=policy.acting_agent_id,
+            delegated_intent=DelegatedIntent(
+                text=delegated_text[: 8 * 1024],
+                source="langchain_deep_agents_task",
+            ),
+            tool_allowlist=tuple(
+                policy.agntid_tool_id_map.get(name, name)
+                for name in policy.tool_allowlist
+            ),
+            approval=ApprovalEvidence(),
+        )
+        return DelegationProposal(cache_key, subagent_type, canonical)
+
+    def approval_for_request(
+        self,
+        *,
+        request: Any,
+        context: Any,
+        policy: Any | None = None,
+    ) -> ApprovalEvidence:
+        """Bind host-recorded approval to this exact canonical tool call."""
+        approval = getattr(context, "approval_for", lambda *_: None)(
+            request.name, dict(request.args)
+        )
+        evidence = ApprovalEvidence.from_mapping(approval)
+        if not evidence.required:
+            return evidence
+
+        if policy is None:
+            policies = getattr(context, "delegation_policies", {}) or {}
+            policy = next(
+                (
+                    candidate
+                    for candidate in policies.values()
+                    if request.name in getattr(candidate, "tool_allowlist", ())
+                ),
+                None,
+            )
+        tool_map = getattr(policy, "agntid_tool_id_map", {}) if policy else {}
+        canonical_tool_name = tool_map.get(request.name, request.name)
+        return replace(
+            evidence,
+            source=evidence.source or "framework_interrupt",
+            tool_name=canonical_tool_name,
+            arguments_digest=arguments_digest(dict(request.args)),
+        )
 
     def delegation_for_request(self, *, request: Any, context: Any) -> DelegationProposal | None:
         runtime = getattr(request, "runtime", None)
@@ -163,8 +241,10 @@ class DeepAgentsAdapter:
 
         cache_key = f"{framework_agent_name}\x1f{delegated_text}"
         task_id = str(getattr(context, "task_id"))
-        approval = getattr(context, "approval_for", lambda *_: None)(
-            request.name, dict(request.args)
+        approval_evidence = self.approval_for_request(
+            request=request,
+            context=context,
+            policy=policy,
         )
         canonical = DelegationContext(
             delegation_id=str(uuid5(NAMESPACE_URL, f"agntid:{task_id}:{cache_key}")),
@@ -178,7 +258,7 @@ class DeepAgentsAdapter:
                 policy.agntid_tool_id_map.get(name, name)
                 for name in policy.tool_allowlist
             ),
-            approval=ApprovalEvidence.from_mapping(approval),
+            approval=approval_evidence,
         )
         return DelegationProposal(cache_key, framework_agent_name, canonical)
 

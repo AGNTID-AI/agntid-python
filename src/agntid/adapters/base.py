@@ -15,6 +15,8 @@ class AdapterCapabilities:
     nested_delegation: bool = False
     approval_events: bool = False
     compound_intent: bool = False
+    execution_plan: bool = False
+    framework_delegation_events: bool = False
 
     def names(self) -> tuple[str, ...]:
         return tuple(name for name, enabled in vars(self).items() if enabled)

@@ -25,6 +25,7 @@ TASK_OPEN_TOOL = "agntid_task_open"
 TASK_CLOSE_TOOL = "agntid_task_close"
 DELEGATION_OPEN_TOOL = "agntid_delegation_open"
 DELEGATION_CLOSE_TOOL = "agntid_delegation_close"
+ACTION_UPDATE_TOOL = "agntid_action_update"
 
 # Type for sender: accepts a JSON-RPC message (dict) and sends it to the platform.
 TaskSender = Callable[[dict[str, Any]], Any]
@@ -160,13 +161,52 @@ async def send_delegation_close(
     client: Any,
     task_id: str,
     delegation_id: str,
+    *,
+    status: str = "completed",
+    reason: str | None = None,
 ) -> Any:
     """Close one delegation without closing the root task."""
     return await call_tool_async(
         client,
         DELEGATION_CLOSE_TOOL,
-        {"task_id": task_id, "delegation_id": delegation_id},
+        {
+            "task_id": task_id,
+            "delegation_id": delegation_id,
+            "status": status,
+            "reason": reason,
+        },
     )
+
+
+async def send_action_update(
+    client: Any,
+    task_id: str,
+    action_id: str,
+    status: str,
+    **details: Any,
+) -> Any:
+    """Persist a declared action lifecycle transition."""
+    arguments = {
+        "task_id": task_id,
+        "action_id": action_id,
+        "status": status,
+    }
+    arguments.update(
+        {
+            key: value
+            for key, value in details.items()
+            if key
+            in {
+                "reason",
+                "delegation_id",
+                "acting_agent_id",
+                "tool_name",
+                "condition_status",
+            }
+            and value is not None
+        }
+    )
+    return await call_tool_async(client, ACTION_UPDATE_TOOL, arguments)
 
 
 @asynccontextmanager

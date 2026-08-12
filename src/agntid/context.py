@@ -9,6 +9,8 @@ from __future__ import annotations
 
 from copy import deepcopy
 from dataclasses import dataclass, field
+import hashlib
+import json
 import re
 from typing import Any, Mapping
 
@@ -32,6 +34,14 @@ def extract_explicit_constraints(*prompts: str) -> tuple[str, ...]:
 
 def _mapping(value: Mapping[str, Any] | None) -> dict[str, Any]:
     return deepcopy(dict(value or {}))
+
+
+def arguments_digest(arguments: Mapping[str, Any] | None) -> str:
+    """Stable SHA-256 binding shared with the AgntID runtime."""
+    canonical = json.dumps(
+        dict(arguments or {}), sort_keys=True, separators=(",", ":"), ensure_ascii=False
+    ).encode("utf-8")
+    return hashlib.sha256(canonical).hexdigest()
 
 
 @dataclass(frozen=True)
@@ -65,6 +75,58 @@ class ConversationContext:
 
 
 @dataclass(frozen=True)
+class PlannedAction:
+    """A framework-declared action visible even if no tool is attempted."""
+
+    action_id: str
+    title: str
+    kind: str = "tool"
+    tool_name: str = ""
+    expected_agent_id: str = ""
+    description: str = ""
+    status: str = "planned"
+    reason: str = ""
+    requirement: str = "required"
+    condition: str = ""
+    condition_status: str = ""
+    depends_on: tuple[str, ...] = ()
+    sequence: int = 0
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "action_id": self.action_id,
+            "title": self.title,
+            "kind": self.kind,
+            "tool_name": self.tool_name,
+            "expected_agent_id": self.expected_agent_id,
+            "description": self.description,
+            "status": self.status,
+            "reason": self.reason,
+            "requirement": self.requirement,
+            "condition": self.condition,
+            "condition_status": self.condition_status,
+            "depends_on": list(self.depends_on),
+            "sequence": self.sequence,
+        }
+
+
+@dataclass(frozen=True)
+class ExecutionPlan:
+    """Framework-neutral plan-versus-execution manifest."""
+
+    plan_id: str
+    actions: tuple[PlannedAction, ...]
+    source: str = "framework_adapter"
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "plan_id": self.plan_id,
+            "source": self.source,
+            "actions": [action.to_dict() for action in self.actions],
+        }
+
+
+@dataclass(frozen=True)
 class ExecutionContext:
     framework: FrameworkInfo
     turn_id: str
@@ -72,6 +134,7 @@ class ExecutionContext:
     root_agent_id: str
     thread_id: str = ""
     conversation: ConversationContext = field(default_factory=ConversationContext)
+    execution_plan: ExecutionPlan | None = None
     extensions: dict[str, Any] = field(default_factory=dict)
     version: str = CONTEXT_VERSION
 
@@ -84,6 +147,9 @@ class ExecutionContext:
             "root_task_id": self.root_task_id,
             "root_agent_id": self.root_agent_id,
             "conversation": self.conversation.to_dict(),
+            "execution_plan": (
+                self.execution_plan.to_dict() if self.execution_plan else None
+            ),
             "extensions": deepcopy(self.extensions),
         }
 
@@ -115,6 +181,37 @@ class ExecutionContext:
                 revoked_intent_ids=tuple(conversation.get("revoked_intent_ids") or ()),
                 entity_references=_mapping(conversation.get("entity_references")),
             ),
+            execution_plan=(
+                ExecutionPlan(
+                    plan_id=str(dict(data["execution_plan"]).get("plan_id") or ""),
+                    source=str(
+                        dict(data["execution_plan"]).get("source")
+                        or "framework_adapter"
+                    ),
+                    actions=tuple(
+                        PlannedAction(
+                            action_id=str(item.get("action_id") or ""),
+                            title=str(item.get("title") or ""),
+                            kind=str(item.get("kind") or "tool"),
+                            tool_name=str(item.get("tool_name") or ""),
+                            expected_agent_id=str(
+                                item.get("expected_agent_id") or ""
+                            ),
+                            description=str(item.get("description") or ""),
+                            status=str(item.get("status") or "planned"),
+                            reason=str(item.get("reason") or ""),
+                            requirement=str(item.get("requirement") or "required"),
+                            condition=str(item.get("condition") or ""),
+                            condition_status=str(item.get("condition_status") or ""),
+                            depends_on=tuple(item.get("depends_on") or ()),
+                            sequence=int(item.get("sequence") or 0),
+                        )
+                        for item in dict(data["execution_plan"]).get("actions", [])
+                    ),
+                )
+                if data.get("execution_plan")
+                else None
+            ),
             extensions=_mapping(data.get("extensions")),
         )
 
@@ -145,6 +242,11 @@ class ApprovalEvidence:
     decision: str = ""
     approver_id: str = ""
     decision_id: str = ""
+    source: str = ""
+    tool_name: str = ""
+    arguments_digest: str = ""
+    issued_at: str = ""
+    expires_at: str = ""
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -152,6 +254,11 @@ class ApprovalEvidence:
             "decision": self.decision,
             "approver_id": self.approver_id,
             "decision_id": self.decision_id,
+            "source": self.source,
+            "tool_name": self.tool_name,
+            "arguments_digest": self.arguments_digest,
+            "issued_at": self.issued_at,
+            "expires_at": self.expires_at,
         }
 
     @classmethod
@@ -162,6 +269,11 @@ class ApprovalEvidence:
             decision=str(data.get("decision") or ""),
             approver_id=str(data.get("approver_id") or ""),
             decision_id=str(data.get("decision_id") or ""),
+            source=str(data.get("source") or ""),
+            tool_name=str(data.get("tool_name") or ""),
+            arguments_digest=str(data.get("arguments_digest") or ""),
+            issued_at=str(data.get("issued_at") or ""),
+            expires_at=str(data.get("expires_at") or ""),
         )
 
 

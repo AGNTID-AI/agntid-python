@@ -12,6 +12,8 @@ import json
 import threading
 from typing import Any
 
+from agntid.decision import DecisionOutcome, parse_decision
+
 
 # ---------------------------------------------------------------------------
 # Detection
@@ -30,6 +32,8 @@ def is_denial_error(exc: BaseException) -> bool:
             "policy",
             "task expired",
             "task closed",
+            "review required",
+            "waiting for agntid",
         )
     )
 
@@ -77,6 +81,7 @@ def parse_denial_from_exception(exc: BaseException) -> tuple[str, dict[str, Any]
     policy = payload.get("__agntid_policy_decision")
     flow = payload.get("__agntid_execution_flow")
     if isinstance(policy, dict):
+        decision = parse_decision(payload)
         reason = policy.get("reason") or err or "Policy denied"
         policy_name = policy.get("policy_name") or ""
         intent = policy.get("intent_validation") or {}
@@ -85,11 +90,22 @@ def parse_denial_from_exception(exc: BaseException) -> tuple[str, dict[str, Any]
             "policy_name": policy_name,
             "error": err,
         }
+        if decision is not None:
+            denial_info["outcome"] = decision.outcome.value
+            denial_info["verdict_code"] = decision.code
+            denial_info["intent_status"] = decision.intent_status
+            if decision.review is not None:
+                denial_info["review"] = decision.review
         if intent.get("mismatch_reason"):
             denial_info["intent_mismatch"] = intent["mismatch_reason"]
         if isinstance(flow, dict) and flow.get("denial_step"):
             denial_info["denial_step"] = flow["denial_step"]
-        parts = [f"Tool call denied: {reason}"]
+        prefix = (
+            "Tool call waiting for AgntID review"
+            if decision is not None and decision.outcome is DecisionOutcome.REVIEW_REQUIRED
+            else "Tool call denied"
+        )
+        parts = [f"{prefix}: {reason}"]
         if policy_name:
             parts.append(f"Policy: {policy_name}")
         if intent.get("mismatch_reason"):
@@ -163,4 +179,7 @@ def format_denial(denial: dict[str, Any] | None) -> str | None:
         lines.append(f'  Intent: {denial["intent_mismatch"]}')
     if denial.get("denial_step"):
         lines.append(f'  Step: {denial["denial_step"]}')
+    review = denial.get("review")
+    if review is not None:
+        lines.append(f"  Review: {review.status.value} ({review.review_id})")
     return "\n".join(lines)

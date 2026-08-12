@@ -4,6 +4,7 @@ import pytest
 
 from agntid.adapters.base import assert_adapter_identity
 from agntid.adapters.langchain_deep_agents import DeepAgentsAdapter
+from agntid.context import ExecutionPlan, PlannedAction, arguments_digest
 
 
 def test_deep_agents_adapter_emits_root_context_and_constraints():
@@ -18,6 +19,10 @@ def test_deep_agents_adapter_emits_root_context_and_constraints():
         organization_id=None,
         user_roles=(),
         thread_id="thread-1",
+        execution_plan=ExecutionPlan(
+            plan_id="plan-1",
+            actions=(PlannedAction("lookup", "Lookup ticket"),),
+        ),
     )
 
     assert_adapter_identity(adapter)
@@ -27,6 +32,7 @@ def test_deep_agents_adapter_emits_root_context_and_constraints():
     assert context.conversation.active_constraints == (
         "Do not send a notification.",
     )
+    assert context.execution_plan.plan_id == "plan-1"
 
 
 def test_deep_agents_adapter_extracts_delegated_prompt_from_state():
@@ -55,6 +61,33 @@ def test_deep_agents_adapter_extracts_delegated_prompt_from_state():
     assert proposal.acting_agent_id == "researcher"
     assert proposal.delegated_intent == "Read LIVE-42"
     assert proposal.tool_allowlist == ("tickets.get",)
+
+
+def test_deep_agents_adapter_observes_native_task_before_business_tool():
+    policy = SimpleNamespace(
+        acting_agent_id="researcher:v1",
+        tool_allowlist=("get_ticket",),
+        agntid_tool_id_map={"get_ticket": "tickets.get"},
+    )
+    context = SimpleNamespace(
+        task_id="task-1",
+        agent_id="root:v1",
+        delegation_policies={"researcher": policy},
+    )
+
+    proposal = DeepAgentsAdapter().delegation_for_task_call(
+        subagent_type="researcher",
+        description="Inspect LIVE-42 only.",
+        tool_call_id="framework-call-1",
+        context=context,
+    )
+
+    assert proposal.framework_agent_name == "researcher"
+    assert proposal.acting_agent_id == "researcher:v1"
+    assert proposal.parent_agent_id == "root:v1"
+    assert proposal.delegated_intent == "Inspect LIVE-42 only."
+    assert proposal.tool_allowlist == ("tickets.get",)
+    assert DeepAgentsAdapter().capabilities.framework_delegation_events is True
 
 
 def test_named_subagent_without_trusted_policy_fails_closed():
@@ -91,3 +124,39 @@ def test_named_root_agent_without_distinct_delegated_message_remains_root():
         DeepAgentsAdapter().delegation_for_request(request=request, context=context)
         is None
     )
+
+
+def test_delegated_framework_approval_is_bound_to_canonical_call():
+    args = {"channel": "ops", "message": "LIVE-42 is critical"}
+    policy = SimpleNamespace(
+        acting_agent_id="notifier",
+        tool_allowlist=("send_notification",),
+        agntid_tool_id_map={"send_notification": "notifications.send"},
+    )
+    context = SimpleNamespace(
+        task_id="task-1",
+        agent_id="root",
+        prompt="Notify on-call",
+        delegation_policies={"notifier": policy},
+        approval_for=lambda *_: {
+            "required": True,
+            "decision": "approved",
+            "decision_id": "approval-1",
+            "approver_id": "alice",
+            "expires_at": "2026-08-12T08:05:00Z",
+        },
+    )
+    runtime = SimpleNamespace(
+        config={"metadata": {"lc_agent_name": "notifier"}},
+        state={"messages": [{"role": "user", "content": "Send the notice"}]},
+    )
+    request = SimpleNamespace(name="send_notification", args=args, runtime=runtime)
+
+    proposal = DeepAgentsAdapter().delegation_for_request(
+        request=request, context=context
+    )
+
+    assert proposal is not None
+    assert proposal.approval["source"] == "framework_interrupt"
+    assert proposal.approval["tool_name"] == "notifications.send"
+    assert proposal.approval["arguments_digest"] == arguments_digest(args)
