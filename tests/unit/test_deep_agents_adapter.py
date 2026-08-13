@@ -35,6 +35,51 @@ def test_deep_agents_adapter_emits_root_context_and_constraints():
     assert context.execution_plan.plan_id == "plan-1"
 
 
+def test_deep_agents_adapter_does_not_promote_prior_turn_constraints():
+    adapter = DeepAgentsAdapter()
+    event = SimpleNamespace(
+        prompt="If LIVE-42 is critical, send a notification.",
+        prior_user_prompts=(
+            "Get LIVE-42. Do not send a notification for this request.",
+        ),
+        conversation_summary="",
+        active_constraints=(),
+        revoked_intent_ids=(),
+        entity_references={},
+        organization_id=None,
+        user_roles=(),
+        thread_id="thread-1",
+        execution_plan=None,
+    )
+
+    context = adapter.execution_context(event, task_id="task-2", agent_id="root")
+
+    assert "Do not send a notification" in context.conversation.summary
+    assert context.conversation.active_constraints == ()
+
+
+def test_deep_agents_adapter_preserves_explicit_persistent_constraints():
+    adapter = DeepAgentsAdapter()
+    event = SimpleNamespace(
+        prompt="If LIVE-42 is critical, send a notification.",
+        prior_user_prompts=("Get LIVE-42. Do not modify it.",),
+        conversation_summary="",
+        active_constraints=("Never modify production tickets.",),
+        revoked_intent_ids=(),
+        entity_references={},
+        organization_id=None,
+        user_roles=(),
+        thread_id="thread-1",
+        execution_plan=None,
+    )
+
+    context = adapter.execution_context(event, task_id="task-3", agent_id="root")
+
+    assert context.conversation.active_constraints == (
+        "Never modify production tickets.",
+    )
+
+
 def test_deep_agents_adapter_extracts_delegated_prompt_from_state():
     adapter = DeepAgentsAdapter()
     policy = SimpleNamespace(

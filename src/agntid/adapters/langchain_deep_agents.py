@@ -90,9 +90,12 @@ class DeepAgentsAdapter:
         if not summary and prior:
             summary = "Prior user requests: " + " | ".join(prior[-5:])
 
+        # Prior prompts are useful bounded context, but their negative clauses
+        # are not automatically persistent policy. Framework glue may promote
+        # a genuinely durable instruction through active_constraints.
         constraints = list(getattr(event, "active_constraints", ()) or ())
         root_prompt = str(getattr(event, "prompt", "") or "")
-        constraints.extend(extract_explicit_constraints(*prior, root_prompt))
+        constraints.extend(extract_explicit_constraints(root_prompt))
         constraints = list(dict.fromkeys(item.strip() for item in constraints if item.strip()))
 
         organization_id = getattr(event, "organization_id", None)
