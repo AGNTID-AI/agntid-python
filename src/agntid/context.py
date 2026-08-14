@@ -18,17 +18,37 @@ CONTEXT_VERSION = "1.0"
 
 
 def extract_explicit_constraints(*prompts: str) -> tuple[str, ...]:
-    """Extract bounded, explicit negative constraints for any framework adapter.
+    """Extract bounded, unconditional negative constraints for adapters.
 
     This is provenance capture, not authorization: the AgentID intent engine
     still parses and validates the root and delegated intents independently.
+
+    Conditional branches are deliberately excluded. Flattening text such as
+    ``Otherwise, do not notify anyone`` into ``active_constraints`` would turn
+    the false branch of a condition into a turn-wide prohibition even after the
+    condition was verified as true.
     """
     constraints: list[str] = []
     markers = ("do not ", "don't ", "never ", "must not ", "without ")
+    conditional_markers = (
+        "if ",
+        "if and only if ",
+        "only if ",
+        "unless ",
+        "otherwise",
+        "else ",
+        "except when ",
+        "only when ",
+        "when ",
+    )
     for prompt in prompts:
         for sentence in re.split(r"(?<=[.!?;])\s+|\n+", prompt or ""):
-            if any(marker in sentence.lower() for marker in markers):
-                constraints.append(sentence.strip()[: 8 * 1024])
+            lowered = sentence.lower().strip()
+            if not any(marker in lowered for marker in markers):
+                continue
+            if any(marker in lowered for marker in conditional_markers):
+                continue
+            constraints.append(sentence.strip()[: 8 * 1024])
     return tuple(dict.fromkeys(item for item in constraints if item))[:100]
 
 

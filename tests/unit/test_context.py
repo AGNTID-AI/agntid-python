@@ -4,6 +4,7 @@ from agntid.context import (
     DelegationContext,
     ExecutionContext,
     FrameworkInfo,
+    extract_explicit_constraints,
 )
 
 
@@ -43,3 +44,20 @@ def test_delegation_context_serializes_lineage_and_bounded_intent():
     assert payload["delegation_id"] == "delegation-1"
     assert payload["delegated_intent"]["text"] == "Read LIVE-42"
     assert payload["tool_allowlist"] == ["tickets.get"]
+
+
+def test_explicit_constraints_exclude_conditional_negative_branches():
+    constraints = extract_explicit_constraints(
+        "If and only if it is critical, notify operations. "
+        "Otherwise, do not notify anyone. Do not update the ticket."
+    )
+
+    assert constraints == ("Do not update the ticket.",)
+
+
+def test_explicit_constraints_exclude_inline_conditional_prohibitions():
+    constraints = extract_explicit_constraints(
+        "Do not notify unless the verified severity is critical."
+    )
+
+    assert constraints == ()
