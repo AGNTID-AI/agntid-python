@@ -1,0 +1,38 @@
+[project]
+name = "agntid-deepagents-poc"
+version = "0.1.0"
+description = "End-to-end LangChain and Deep Agents POCs for the AgntID MCP runtime"
+readme = "README.md"
+requires-python = ">=3.11,<3.14"
+dependencies = [
+  "agntid-sdk>=0.2.0",
+  "deepagents>=0.3.0",
+  "langchain>=1.0.0",
+  "langchain-mcp-adapters>=0.3.0",
+  "langchain-openai>=1.0.0",
+  "python-dotenv>=1.0.0",
+  "rich>=13.0.0",
+]
+
+[tool.uv.sources]
+agntid-sdk = { path = "../..", editable = true }
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0.0",
+  "pytest-asyncio>=0.24.0",
+]
+
+[project.scripts]
+agntid-poc = "agntid_deepagents_poc.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/agntid_deepagents_poc"]

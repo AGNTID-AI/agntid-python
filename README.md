@@ -122,10 +122,11 @@ Each example has its own README with step-by-step integration instructions.
 
 | Framework | Directory | Description |
 |-----------|-----------|-------------|
+| **LangChain Deep Agents** | [`examples/langchain-deepagents/`](examples/langchain-deepagents/) | Supervisor, specialist subagents, multi-turn context, HITL, and AgntID execution evidence |
 | **MSK + OpenAI** | [`examples/msk/`](examples/msk/) | ChatCompletionAgent via Semantic Kernel with kernel plugin |
 | **OpenAI + FastMCP** | [`examples/fastmcp/`](examples/fastmcp/) | OpenAI client with function-calling directly (no MSK) |
 
-Both examples use the same CLI interface:
+The compact MSK and FastMCP examples use this CLI interface:
 
 ```bash
 python msk_demo.py --agent-name MyAgent --user-id user-42
@@ -208,6 +209,7 @@ agntid-python/        # repo root
     _platform.py     # Wire format internals
     py.typed         # PEP 561 type marker
   examples/
+    langchain-deepagents/ # Full multi-agent example with a three-step evaluator quick start
     msk/             # MSK + OpenAI demo (see examples/msk/README.md)
     fastmcp/         # FastMCP direct demo (see examples/fastmcp/README.md)
   tests/
