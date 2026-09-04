@@ -55,20 +55,31 @@ async def main() -> None:
 
             wrapped.set_task_id(task_id)
 
-            # Prefer add_numbers (host tool); else first available tool with safe args
+            # Prefer the built-in demo tool; otherwise use the first tool whose
+            # required arguments this smoke test understands.
             tool_name, args = None, {}
             for t in tools:
                 if t.name in (agntid.TASK_OPEN_TOOL, agntid.TASK_CLOSE_TOOL):
                     continue
-                if t.name == "add_numbers":
-                    tool_name, args = "add_numbers", {"a": 2, "b": 3}
+                if t.name == "demo_add_numbers":
+                    tool_name, args = "demo_add_numbers", {
+                        "first_number": 11,
+                        "second_number": 22,
+                    }
                     break
                 if tool_name is None:
-                    tool_name = t.name
-                    if "path" in (t.inputSchema or {}).get("properties", {}):
-                        args = {"path": "/tmp"}
-                    elif "a" in (t.inputSchema or {}).get("properties", {}):
-                        args = {"a": 1, "b": 2}
+                    properties = (t.inputSchema or {}).get("properties", {})
+                    required = set((t.inputSchema or {}).get("required", []))
+                    if required <= {"path"} and "path" in properties:
+                        tool_name, args = t.name, {"path": "/tmp"}
+                    elif required <= {"first_number", "second_number"} and {
+                        "first_number",
+                        "second_number",
+                    } <= properties.keys():
+                        tool_name, args = t.name, {
+                            "first_number": 11,
+                            "second_number": 22,
+                        }
 
             if not tool_name:
                 print("No runnable tool found", file=sys.stderr)

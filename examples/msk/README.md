@@ -40,7 +40,6 @@ async with mcp_client:
     plugin = agntid.msk.create_plugin_from_mcp_tools(
         wrapped, tools_list,
         plugin_name="MCPTools",
-        exclude_tool_names=(agntid.TASK_OPEN_TOOL, agntid.TASK_CLOSE_TOOL),
     )
     kernel.add_plugin(plugin, plugin_name="MCPTools")
 ```

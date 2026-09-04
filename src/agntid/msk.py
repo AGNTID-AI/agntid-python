@@ -29,7 +29,16 @@ from agntid.task import send_task_open
 # Task-glue tool names to exclude from the plugin (not callable by the LLM)
 AGNTID_TASK_OPEN = "agntid_task_open"
 AGNTID_TASK_CLOSE = "agntid_task_close"
-DEFAULT_EXCLUDE_TOOL_NAMES = (AGNTID_TASK_OPEN, AGNTID_TASK_CLOSE)
+AGNTID_DELEGATION_OPEN = "agntid_delegation_open"
+AGNTID_DELEGATION_CLOSE = "agntid_delegation_close"
+AGNTID_ACTION_UPDATE = "agntid_action_update"
+DEFAULT_EXCLUDE_TOOL_NAMES = (
+    AGNTID_TASK_OPEN,
+    AGNTID_TASK_CLOSE,
+    AGNTID_DELEGATION_OPEN,
+    AGNTID_DELEGATION_CLOSE,
+    AGNTID_ACTION_UPDATE,
+)
 
 
 def agent_id_from_agent(agent: Any) -> str:

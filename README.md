@@ -10,7 +10,9 @@ and the LangChain Deep Agents adapter do not import a framework package.
 
 AgntID task-glue SDK for Python. Connects your AI agent to the AgntID MCP proxy so the platform can **correlate every tool call to the correct user prompt** and enforce **policy, audit, and guardrails** — with minimal code changes.
 
-Works with any agent framework. First-class support for **Microsoft Semantic Kernel (MSK)** and **FastMCP**.
+Works with any agent framework. The repository includes maintained integrations
+and examples for **Microsoft Semantic Kernel**, **LangChain**, **Deep Agents**,
+and **FastMCP**.
 
 > **Status:** This SDK is currently in **alpha** and may evolve as the AgntID runtime stabilizes. We welcome feedback from early adopters.
 
@@ -32,7 +34,16 @@ Requires **Python 3.10+**.
 pip install agntid-sdk
 ```
 
-All dependencies (fastmcp, mcp, openai, semantic-kernel, rich, fastapi) are included.
+The base install includes the MCP transport and rich terminal output. Framework
+packages are optional:
+
+```bash
+pip install "agntid-sdk[msk]"     # Microsoft Semantic Kernel
+pip install "agntid-sdk[openai]"  # Direct OpenAI example
+```
+
+The LangChain and Deep Agents example has its own locked environment under
+`examples/langchain-deepagents/`.
 
 ### Install from release
 
@@ -167,8 +178,10 @@ python msk_demo.py --help
 |----------|-------------|
 | `agntid.msk.create_plugin_from_mcp_tools(wrapped, tools, ...)` | Builds an MSK kernel plugin from MCP tools |
 | `agntid.msk.agent_id_from_agent(agent)` | Derives agent ID from an MSK agent |
+| `agntid.adapters.langchain_deep_agents.DeepAgentsAdapter` | Converts trusted framework context and delegations into the canonical AgntID contract |
 
-Included in the core SDK.
+The adapter is included in the base SDK and does not import LangChain. Install
+the `[msk]` extra before using the Semantic Kernel plugin builder.
 
 ---
 

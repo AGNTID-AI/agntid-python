@@ -4,6 +4,18 @@ All notable changes to the `agntid-sdk` package are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - Unreleased
+
+### Added
+- Framework-neutral execution, plan, delegation, action, and approval context.
+- LangChain and Deep Agents adapter plus a locked, runnable example project.
+- Delegation and action lifecycle helpers.
+
+### Changed
+- Framework dependencies are optional again; use `[msk]` or `[openai]` as needed.
+- The Semantic Kernel plugin excludes all AgntID runtime control tools by default.
+- The direct smoke example uses `demo_add_numbers(first_number, second_number)`.
+
 ## [0.1.1] - 2026-03-09
 
 ### Added
