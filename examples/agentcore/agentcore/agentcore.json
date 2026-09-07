@@ -1,0 +1,67 @@
+{
+  "$schema": "https://schema.agentcore.aws.dev/v1/agentcore.json",
+  "name": "AgntidAgentCore",
+  "version": 1,
+  "managedBy": "CDK",
+  "tags": {
+    "agentcore:created-by": "agentcore-cli",
+    "agentcore:project-name": "AgntidAgentCore"
+  },
+  "runtimes": [
+    {
+      "name": "AgntidAgent",
+      "build": "CodeZip",
+      "entrypoint": "main.py",
+      "codeLocation": "app/AgntidAgent/",
+      "runtimeVersion": "PYTHON_3_11",
+      "networkMode": "PUBLIC",
+      "protocol": "HTTP",
+      "requestHeaderAllowlist": [
+        "X-Amzn-Bedrock-AgentCore-Runtime-Custom-Agntid-User-Id",
+        "X-Amzn-Bedrock-AgentCore-Runtime-Custom-Agntid-Authorization"
+      ],
+      "envVars": [
+        {
+          "name": "AGNTID_MCP_URL",
+          "value": "http://localhost:8082/mcp"
+        },
+        {
+          "name": "AGNTID_AGENT_ID",
+          "value": "aws-agentcore-langchain:v1"
+        },
+        {
+          "name": "AGNTID_TOOL_ALLOWLIST",
+          "value": "demo_add_numbers"
+        },
+        {
+          "name": "AGNTID_REQUIRE_BEARER",
+          "value": "true"
+        },
+        {
+          "name": "AGNTID_ENABLE_DIRECT_SMOKE",
+          "value": "false"
+        },
+        {
+          "name": "AGNTID_MODEL_PROVIDER",
+          "value": "bedrock"
+        },
+        {
+          "name": "AGNTID_MODEL_ID",
+          "value": "global.anthropic.claude-sonnet-4-5-20250929-v1:0"
+        }
+      ]
+    }
+  ],
+  "memories": [],
+  "knowledgeBases": [],
+  "credentials": [],
+  "evaluators": [],
+  "onlineEvalConfigs": [],
+  "agentCoreGateways": [],
+  "policyEngines": [],
+  "configBundles": [],
+  "abTests": [],
+  "harnesses": [],
+  "datasets": [],
+  "payments": []
+}

@@ -1,0 +1,35 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "agntid-agentcore-example"
+version = "0.1.0"
+description = "Amazon Bedrock AgentCore Runtime example for AgntID-protected MCP tools"
+readme = "README.md"
+requires-python = ">=3.11,<3.14"
+dependencies = [
+  "agntid-sdk>=0.2.0",
+  "bedrock-agentcore==1.22.0",
+  "langchain>=1.0.3,<2",
+  "langchain-aws>=1.0,<2",
+  "langgraph>=1.0.2,<2",
+  "opentelemetry-instrumentation-langchain>=0.59.0",
+]
+
+[tool.uv.sources]
+agntid-sdk = { path = "vendor/agntid_sdk-0.2.0-py3-none-any.whl" }
+
+[project.optional-dependencies]
+dev = [
+  "httpx>=0.28,<1",
+  "pytest>=9,<10",
+  "pytest-asyncio>=1.3,<2",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["agntid_agentcore"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]

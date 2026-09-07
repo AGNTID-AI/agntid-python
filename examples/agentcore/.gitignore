@@ -1,0 +1,13 @@
+agentcore/.env.local
+agentcore/.cache/
+agentcore/.cli/
+agentcore/cdk/cdk.out/
+agentcore/cdk/dist/
+agentcore/cdk/node_modules/
+agentcore/*.zip
+agentcore/*/staging/
+app/AgntidAgent/.venv/
+app/AgntidAgent/.pytest_cache/
+app/AgntidAgent/uv.lock
+__pycache__/
+*.py[cod]

@@ -12,7 +12,7 @@ AgntID task-glue SDK for Python. Connects your AI agent to the AgntID MCP proxy 
 
 Works with any agent framework. The repository includes maintained integrations
 and examples for **Microsoft Semantic Kernel**, **LangChain**, **Deep Agents**,
-and **FastMCP**.
+**Amazon Bedrock AgentCore**, and **FastMCP**.
 
 > **Status:** This SDK is currently in **alpha** and may evolve as the AgntID runtime stabilizes. We welcome feedback from early adopters.
 
@@ -135,6 +135,7 @@ Each example has its own README with step-by-step integration instructions.
 |-----------|-----------|-------------|
 | **LangChain Deep Agents** | [`examples/langchain-deepagents/`](examples/langchain-deepagents/) | Supervisor, specialist subagents, multi-turn context, HITL, and AgntID execution evidence |
 | **MSK + OpenAI** | [`examples/msk/`](examples/msk/) | ChatCompletionAgent via Semantic Kernel with kernel plugin |
+| **Amazon Bedrock AgentCore + LangGraph** | [`examples/agentcore/`](examples/agentcore/) | Current AgentCore CLI project, OAuth bearer handoff, protected tools, AWS-free tests, and deployment configuration |
 | **OpenAI + FastMCP** | [`examples/fastmcp/`](examples/fastmcp/) | OpenAI client with function-calling directly (no MSK) |
 
 The compact MSK and FastMCP examples use this CLI interface:
@@ -222,6 +223,7 @@ agntid-python/        # repo root
     _platform.py     # Wire format internals
     py.typed         # PEP 561 type marker
   examples/
+    agentcore/        # AgentCore Runtime + LangGraph example with AWS-free tests
     langchain-deepagents/ # Full multi-agent example with a three-step evaluator quick start
     msk/             # MSK + OpenAI demo (see examples/msk/README.md)
     fastmcp/         # FastMCP direct demo (see examples/fastmcp/README.md)
