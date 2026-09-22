@@ -10,11 +10,16 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Framework-neutral execution, plan, delegation, action, and approval context.
 - LangChain and Deep Agents adapter plus a locked, runnable example project.
 - Delegation and action lifecycle helpers.
+- Amazon Bedrock AgentCore and LangGraph example with AWS-free contract tests.
+- Optional OAuth bearer transport for the core, MSK, and LangChain examples.
+- Shared runtime/bootstrap guide with model-free readiness checks for every
+  maintained framework path.
 
 ### Changed
 - Framework dependencies are optional again; use `[msk]` or `[openai]` as needed.
 - The Semantic Kernel plugin excludes all AgntID runtime control tools by default.
 - The direct smoke example uses `demo_add_numbers(first_number, second_number)`.
+- The customer runtime Compose quick start now uses runtime 2.0.0.
 
 ## [0.1.1] - 2026-03-09
 

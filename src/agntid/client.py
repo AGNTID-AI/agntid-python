@@ -23,9 +23,15 @@ class AgntidMCPClient:
             ...
     """
 
-    def __init__(self, mcp_url: str) -> None:
+    def __init__(self, mcp_url: str, *, access_token: str | None = None) -> None:
+        """Create a client for an open or OAuth-protected AgntID MCP URL.
+
+        ``access_token`` is the raw OAuth access token. The transport sends it
+        as a bearer credential; callers must not include the ``Bearer`` prefix
+        or place the token in prompts, logs, or committed configuration.
+        """
         from fastmcp import Client as _FastMCPClient
-        self._client = _FastMCPClient(mcp_url)
+        self._client = _FastMCPClient(mcp_url, auth=access_token)
 
     def __getattr__(self, name: str) -> Any:
         return getattr(self._client, name)

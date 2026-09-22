@@ -385,22 +385,31 @@ async def identity_interceptor(
     return response
 
 
+def mcp_connection_config(
+    mcp_url: str,
+    access_token: str | None = None,
+) -> dict[str, Any]:
+    """Build an HTTP connection without exposing bearer credentials to tools."""
+
+    connection: dict[str, Any] = {
+        "transport": "http",
+        "url": mcp_url,
+        # RUSE expires sessions server-side and does not expose the optional
+        # MCP DELETE endpoint. Avoid a misleading 404 on clean CLI shutdown.
+        "terminate_on_close": False,
+    }
+    if access_token:
+        connection["headers"] = {"Authorization": f"Bearer {access_token}"}
+    return connection
+
+
 class AgntidBridge:
     """Own one stateful MCP session and the task lifecycle around agent runs."""
 
-    def __init__(self, mcp_url: str):
+    def __init__(self, mcp_url: str, *, access_token: str | None = None):
         self.mcp_url = mcp_url
         self._client = MultiServerMCPClient(
-            {
-                SERVER_NAME: {
-                    "transport": "http",
-                    "url": mcp_url,
-                    # RUSE expires sessions server-side and does not expose the
-                    # optional MCP DELETE endpoint. Avoid a misleading 404 on
-                    # otherwise clean CLI shutdown.
-                    "terminate_on_close": False,
-                }
-            },
+            {SERVER_NAME: mcp_connection_config(mcp_url, access_token)},
             handle_tool_errors=True,
         )
         self.adapter = DeepAgentsAdapter()

@@ -14,6 +14,7 @@ from agntid_deepagents_poc.bridge import (
     DELEGATION_CORRELATION_ARGUMENT,
     SERVER_NAME,
     identity_interceptor,
+    mcp_connection_config,
 )
 from agntid_deepagents_poc.adapter import DeepAgentsAdapter
 from agntid_deepagents_poc.identity import DelegationPolicy, InvocationContext
@@ -23,6 +24,16 @@ def test_bridge_does_not_call_unsupported_session_delete_on_close():
     bridge = AgntidBridge("http://agntid.test/mcp")
 
     assert bridge._client.connections[SERVER_NAME]["terminate_on_close"] is False
+
+
+def test_oauth_connection_header_is_transport_only():
+    config = mcp_connection_config(
+        "https://runtime.example/mcp",
+        "access-token",
+    )
+
+    assert config["headers"] == {"Authorization": "Bearer access-token"}
+    assert "access-token" not in config["url"]
 
 
 @pytest.mark.asyncio

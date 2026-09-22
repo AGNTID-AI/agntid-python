@@ -8,7 +8,8 @@ Prints:
   Tool call successful
 
 Use this for copy → run smoke testing. Requires AGNTID_MCP_URL and a running
-AgntID Runtime with at least one MCP tool (e.g. host add_numbers).
+AgntID Runtime with at least one MCP tool. Set AGNTID_ACCESS_TOKEN to the raw
+OAuth access token when runtime client access requires authentication.
 
 Usage:
   python examples/direct/direct_tool_call.py
@@ -35,8 +36,9 @@ import agntid
 
 async def main() -> None:
     url = os.environ.get("AGNTID_MCP_URL", "http://localhost:8082/mcp")
+    access_token = os.environ.get("AGNTID_ACCESS_TOKEN") or None
 
-    async with agntid.AgntidMCPClient(url) as client:
+    async with agntid.AgntidMCPClient(url, access_token=access_token) as client:
         print("Connected to runtime")
 
         tools = await agntid.get_tools_list(client)
@@ -85,8 +87,9 @@ async def main() -> None:
                 print("No runnable tool found", file=sys.stderr)
                 sys.exit(1)
 
-            await wrapped.call_tool_async(tool_name, args)
-            print("Tool call successful")
+            result = await wrapped.call_tool_async(tool_name, args)
+            print(f"Tool call successful: {tool_name}")
+            print(result)
 
 
 if __name__ == "__main__":

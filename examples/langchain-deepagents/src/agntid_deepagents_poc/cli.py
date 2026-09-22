@@ -32,7 +32,16 @@ from .operations_demo import (
 )
 from .runners import run_framework_agent
 
-DEFAULT_MCP_URL = "http://agntid.ai:8082/mcp"
+DEFAULT_MCP_URL = "http://localhost:8082/mcp"
+
+
+def _bridge(args: argparse.Namespace) -> AgntidBridge:
+    """Create the bridge with an optional OAuth token from trusted process env."""
+
+    return AgntidBridge(
+        args.mcp_url,
+        access_token=os.getenv("AGNTID_ACCESS_TOKEN") or None,
+    )
 
 
 def _exception_summary(exc: BaseException, *, limit: int = 12) -> str:
@@ -120,7 +129,7 @@ def _parser() -> argparse.ArgumentParser:
 async def _direct(args: argparse.Namespace, console: Console) -> None:
     prompt = f"Add {args.first:g} and {args.second:g}"
     context = InvocationContext(args.agent_id, args.user_id, prompt)
-    async with AgntidBridge(args.mcp_url).connect() as bridge:
+    async with _bridge(args).connect() as bridge:
         event = await bridge.invoke_direct(
             "demo_add_numbers",
             {"first_number": args.first, "second_number": args.second},
@@ -134,7 +143,7 @@ async def _identity_matrix(args: argparse.Namespace, console: Console) -> None:
         ("alice@example", 22.0, "expected allow"),
         ("bob@example", 32.0, "expected policy denial"),
     )
-    async with AgntidBridge(args.mcp_url).connect() as bridge:
+    async with _bridge(args).connect() as bridge:
         for user_id, second, expectation in cases:
             prompt = f"Add 11 and {second:g}"
             context = InvocationContext(args.agent_id, user_id, prompt)
@@ -151,7 +160,7 @@ async def _agent(args: argparse.Namespace, console: Console) -> None:
     # The CLI values demonstrate the flow. A web service must set user_id from
     # its verified auth subject and agent_id from trusted deployment config.
     context = InvocationContext(args.agent_id, args.user_id, args.prompt)
-    async with AgntidBridge(args.mcp_url).connect() as bridge:
+    async with _bridge(args).connect() as bridge:
         answer, events = await run_framework_agent(
             framework=args.command,
             model=args.model,
@@ -191,7 +200,7 @@ async def _framework_smoke(args: argparse.Namespace, console: Console) -> None:
         ]
     )
     context = InvocationContext(args.agent_id, args.user_id, prompt)
-    async with AgntidBridge(args.mcp_url).connect() as bridge:
+    async with _bridge(args).connect() as bridge:
         answer, events = await run_framework_agent(
             framework=args.framework,
             model=model,
@@ -204,7 +213,7 @@ async def _framework_smoke(args: argparse.Namespace, console: Console) -> None:
 
 
 async def _engineering_demo(args: argparse.Namespace, console: Console) -> None:
-    async with AgntidBridge(args.mcp_url).connect() as bridge:
+    async with _bridge(args).connect() as bridge:
         await run_engineering_demo(
             console=console,
             bridge=bridge,
@@ -215,7 +224,7 @@ async def _engineering_demo(args: argparse.Namespace, console: Console) -> None:
 
 
 async def _delegation_smoke(args: argparse.Namespace, console: Console) -> None:
-    async with AgntidBridge(args.mcp_url).connect() as bridge:
+    async with _bridge(args).connect() as bridge:
         await run_safe_delegation_smoke(
             console=console,
             bridge=bridge,
@@ -229,7 +238,7 @@ async def _ops_chat(args: argparse.Namespace, console: Console) -> None:
     thread_id = str(uuid4())
     prior_user_prompts: list[str] = []
     roles = tuple(role.strip() for role in args.roles.split(",") if role.strip())
-    async with AgntidBridge(args.mcp_url).connect() as bridge:
+    async with _bridge(args).connect() as bridge:
         agent = build_operations_deep_agent(
             model=args.model,
             bridge=bridge,

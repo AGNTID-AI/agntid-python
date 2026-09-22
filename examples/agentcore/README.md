@@ -42,9 +42,11 @@ the JSON payload, environment, logs, or model context.
 
 ## Prerequisites
 
+- the AgntID runtime prepared by [the common end-to-end setup](../README.md);
 - Python 3.11 or 3.12
 - [`uv`](https://docs.astral.sh/uv/)
 - Node.js 20 or later
+- GNU Make (use WSL or Git Bash on Windows)
 - the current AgentCore CLI:
 
 ```bash
@@ -54,6 +56,10 @@ agentcore --version
 
 This checkout was verified with AgentCore CLI `0.28.1` and
 `bedrock-agentcore==1.22.0`.
+
+The unit tests below do not need a runtime. Before the direct smoke or model
+path, complete the shared setup and confirm `demo_add_numbers` works through the
+same `AGNTID_MCP_URL`.
 
 Prepare the example once after cloning. This builds an ignored wheel from the
 current `agntid-python` checkout so the same SDK code is available both locally
@@ -85,8 +91,8 @@ model provider.
 
 This optional smoke uses AgentCore locally and calls `demo_add_numbers` through
 your local AgntID runtime. It does not call Bedrock or another model. Start the
-local AgntID runtime first and make sure the tool is visible under its current
-protection profile.
+local AgntID runtime using the shared guide and make sure the tool is visible
+under its current protection profile.
 
 Copy the local settings:
 
@@ -169,9 +175,23 @@ argument.
 
 ## Deploy to AgentCore Runtime
 
-Deployment creates AWS resources and requires AWS credentials. Before running
-it, replace the local MCP URL in `agentcore/agentcore.json` with an HTTPS AgntID
-runtime address reachable from AgentCore. Do not deploy a `localhost` URL.
+Deployment creates AWS resources. Install AWS CLI v2, configure the intended
+profile, and verify which identity will deploy:
+
+```bash
+aws --version
+aws sts get-caller-identity
+```
+
+That identity needs AgentCore API access and permission to assume the CDK
+bootstrap roles used by `agentcore deploy`. Development deployment also creates
+IAM and CloudFormation resources; use your organization's least-privilege
+deployment role rather than guessing permissions. See AWS's
+[AgentCore Runtime permissions](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/runtime-permissions.html).
+
+Before running it, replace the local MCP URL in `agentcore/agentcore.json` with
+an HTTPS AgntID runtime address reachable from AgentCore. Do not deploy a
+`localhost` URL or expose port 8082 directly to the internet.
 
 Add your account and a supported region to `agentcore/aws-targets.json`:
 
@@ -191,6 +211,7 @@ Validate and inspect the CodeZip package before deployment:
 ```bash
 make validate
 make package
+agentcore deploy --dry-run
 make deploy
 ```
 
@@ -212,6 +233,17 @@ agentcore invoke \
   --header "X-Amzn-Bedrock-AgentCore-Runtime-Custom-Agntid-Authorization: Bearer ${AGNTID_ACCESS_TOKEN}" \
   'Add 11 and 22 using the available tool.'
 ```
+
+Then check deployment state and runtime logs:
+
+```bash
+agentcore status
+agentcore logs --since 30m
+```
+
+Confirm the matching allowed or denied call in AgntID Reporting as well as the
+AgentCore response. AWS documents the current CLI lifecycle in its
+[AgentCore CLI quick start](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/runtime-get-started-cli.html).
 
 ## OAuth handoff requirements
 
@@ -247,6 +279,11 @@ runtime authorizer) remains separate from AgntID MCP authorization.
 
 - `Missing required header`: pass the exact custom user ID and authorization
   header names shown above. Header matching is case-insensitive.
+- AWS identity failure: run `aws sts get-caller-identity` in the same shell and
+  confirm the selected account matches `agentcore/aws-targets.json`.
+- deployment permission failure: compare the deploying role with AWS's current
+  AgentCore CLI permission policy; do not grant broad production access merely
+  to bypass a failed development deployment.
 - `No allowlisted AgntID tools are visible`: compare `AGNTID_TOOL_ALLOWLIST`
   with the runtime's current profile-filtered MCP tool list.
 - local connection failure: confirm `AGNTID_MCP_URL` and that the runtime is

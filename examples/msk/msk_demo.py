@@ -10,10 +10,12 @@ Requires:
   pip install agntid-sdk[msk]
   export OPENAI_API_KEY=your-openai-api-key
   export AGNTID_MCP_URL=http://localhost:8082/mcp
+  export AGNTID_ACCESS_TOKEN=raw-access-token  # only when OAuth is required
 
 Usage:
   python msk_demo.py                                        # defaults
   python msk_demo.py --agent-name MyAgent --user-id user-42 # custom
+  python msk_demo.py --check-runtime                        # no model call
   python msk_demo.py --help
 """
 
@@ -53,6 +55,11 @@ def parse_args() -> argparse.Namespace:
         default="demo-user",
         help="User ID for AgntID task attribution (default: demo-user)",
     )
+    ap.add_argument(
+        "--check-runtime",
+        action="store_true",
+        help="Build the MSK plugin and verify demo_add_numbers without calling a model",
+    )
     return ap.parse_args()
 
 # ---------------------------------------------------------------------------
@@ -60,6 +67,10 @@ def parse_args() -> argparse.Namespace:
 # ---------------------------------------------------------------------------
 
 async def run(args: argparse.Namespace):
+    if args.check_runtime:
+        await _check_runtime()
+        return
+
     from semantic_kernel import Kernel
     from semantic_kernel.agents import ChatCompletionAgent
     from semantic_kernel.connectors.ai import FunctionChoiceBehavior
@@ -74,6 +85,7 @@ async def run(args: argparse.Namespace):
         hint="pip install agntid-sdk[msk]",
     )
     mcp_url = env["AGNTID_MCP_URL"]
+    access_token = os.environ.get("AGNTID_ACCESS_TOKEN") or None
     user_id = args.user_id
 
     kernel = Kernel()
@@ -91,7 +103,10 @@ async def run(args: argparse.Namespace):
 
     # -- 2. AgntID: connect, list tools, add plugin ---------------------------
 
-    mcp_client = agntid.AgntidMCPClient(mcp_url)
+    mcp_client = agntid.AgntidMCPClient(
+        mcp_url,
+        access_token=access_token,
+    )
     async with mcp_client:
         tools_list = await agntid.get_tools_list(mcp_client)
         wrapped = agntid.wrap_client(mcp_client)
@@ -149,6 +164,40 @@ async def run(args: argparse.Namespace):
 
         print("[msk_demo] Done.", file=sys.stderr)
 
+
+async def _check_runtime() -> None:
+    """Verify MCP discovery and MSK plugin construction without a model call."""
+
+    from semantic_kernel import Kernel
+
+    env = agntid.require_env(
+        "AGNTID_MCP_URL",
+        hint='pip install -e ".[msk]"',
+    )
+    access_token = os.environ.get("AGNTID_ACCESS_TOKEN") or None
+    async with agntid.AgntidMCPClient(
+        env["AGNTID_MCP_URL"],
+        access_token=access_token,
+    ) as client:
+        tools = await agntid.get_tools_list(client)
+        wrapped = agntid.wrap_client(client)
+        plugin = agntid.msk.create_plugin_from_mcp_tools(
+            wrapped,
+            tools,
+            plugin_name="MCPTools",
+        )
+        Kernel().add_plugin(plugin, plugin_name="MCPTools")
+
+    tool_names = {getattr(tool, "name", "") for tool in tools}
+    if "demo_add_numbers" not in tool_names:
+        raise RuntimeError(
+            "demo_add_numbers is not visible; review the runtime protection profile"
+        )
+    print(
+        "MSK readiness passed: demo_add_numbers is visible and the MCPTools "
+        "plugin was built without calling a model."
+    )
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -177,7 +226,11 @@ def _ask_continue() -> bool:
 # ---------------------------------------------------------------------------
 
 def main():
-    asyncio.run(run(parse_args()))
+    try:
+        asyncio.run(run(parse_args()))
+    except Exception as exc:
+        print(f"[msk_demo] Failed: {exc}", file=sys.stderr)
+        raise SystemExit(1) from exc
 
 if __name__ == "__main__":
     main()

@@ -4,8 +4,8 @@
 #
 # Prerequisites:
 #   1. Docker v20.10+ and Docker Compose v2+
-#   2. docker login registry.agntid.ai  (use your agntid.ai portal credentials)
-#   3. A bootstrap token (generate at https://agntid.ai → Runtime → Bootstrap Tokens)
+#   2. docker login registry.agntid.ai  (or registry.${DOMAIN} for non-production instances)
+#   3. A bootstrap token (generate in the matching AgentID portal instance)
 #
 # Usage:
 #   docker compose up -d
@@ -15,13 +15,15 @@
 #
 # After startup, open http://localhost:8080 and enter your bootstrap token.
 #
-# Intent parser: first start downloads the ML model (~90 MB) into the intent-parser-model
-# volume; subsequent starts use the cache. Allow 1–2 minutes for first-time healthy.
-# Version: 0.0.1
+# Intent parser: first start downloads the ML model (~900 MB) into the intent-parser-model
+# volume; subsequent starts use the cache. First-time startup can take several minutes.
+# MCP package managers: npx/uvx caches are persisted in runtime-mcp-cache so
+# customer-added MCP servers are not re-downloaded after container recreation.
+# Version: 2.0.0
 
 services:
   achr-runtime:
-    image: registry.agntid.ai/achr-runtime:0.0.1
+    image: ${RUNTIME_IMAGE_REGISTRY:-registry.${DOMAIN:-agntid.ai}}/achr-runtime:${RUNTIME_IMAGE_TAG:-2.0.0}
     restart: unless-stopped
     ports:
       - "${RUNTIME_PORT:-8080}:8080"
@@ -30,10 +32,25 @@ services:
       - runtime-config:/config
       - runtime-data:/data
       - runtime-logs:/logs
+      - runtime-mcp-cache:/cache/mcp
+      # Optional Docker-backed MCP mode:
+      # Mounting the host Docker socket lets MCP servers launched by the runtime
+      # call the host Docker daemon. This is powerful and risky: any enabled MCP
+      # tool with Docker access can start containers, mount host paths, and make
+      # host-level changes. Enable only in trusted deployments after policy review.
+      # Bind mounts requested by child containers are resolved on the host, not
+      # inside this runtime container. The agntid user must also have permission
+      # to read/write the socket, usually via the host docker group GID.
+      # - /var/run/docker.sock:/var/run/docker.sock
+    # Optional Docker-backed MCP permission helper:
+    # Set DOCKER_GID to the host docker group id if the mounted socket is
+    # group-owned by docker, for example: DOCKER_GID=$(getent group docker | cut -d: -f3)
+    # group_add:
+    #   - "${DOCKER_GID:-998}"
     environment:
       - RUSE_ENV=production
       - RUSE_LOG_LEVEL=${LOG_LEVEL:-info}
-      - RUSE_AGENID_ENDPOINT=https://runtime.agntid.ai:8443
+      - RUSE_AGENID_ENDPOINT=${RUSE_AGENID_ENDPOINT:-https://runtime.${DOMAIN:-agntid.ai}:8443}
       - RUSE_SERVER_PORT=8080
       - RUSE_STORAGE_PATH=/data/ruse.db
       - RUSE_MCP_ENABLED=true
@@ -41,6 +58,13 @@ services:
       - RUSE_MCP_PORT=8000
       - RUSE_MCP_EXTERNAL_PORT=${MCP_PORT:-8082}
       - RUSE_MCP_HOST=0.0.0.0
+      - RUSE_MCP_TUNNEL_ENDPOINT=http://127.0.0.1:8000/mcp
+      - RUSE_MCP_RUNTIME_UI_ENDPOINT=http://127.0.0.1:8080
+      - RUSE_MCP_SIMULATION_ENDPOINT=http://127.0.0.1:8000/mcp
+      # Optional Docker-backed MCP mode:
+      # Uncomment together with the docker.sock mount above so Docker SDKs and
+      # docker CLI based MCP servers use the mounted host Docker daemon.
+      # - DOCKER_HOST=unix:///var/run/docker.sock
       - INTENT_PARSER_V2_CLASSIFY_URL=http://achr-intent-parser:8000
       - INTENT_PARSER_V2_CLASSIFY_TIMEOUT_MS=${INTENT_PARSER_V2_CLASSIFY_TIMEOUT_MS:-10000}
     healthcheck:
@@ -54,7 +78,7 @@ services:
         condition: service_healthy
 
   achr-intent-parser:
-    image: registry.agntid.ai/achr-intent-parser:0.0.1
+    image: ${RUNTIME_IMAGE_REGISTRY:-registry.${DOMAIN:-agntid.ai}}/achr-intent-parser:${RUNTIME_IMAGE_TAG:-2.0.0}
     restart: unless-stopped
     stop_grace_period: 600s
     expose:
@@ -68,7 +92,7 @@ services:
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
-      timeout: 10s
+      timeout: 30s
       retries: 5
       start_period: 300s
     deploy:
@@ -84,4 +108,5 @@ volumes:
   runtime-config:
   runtime-data:
   runtime-logs:
+  runtime-mcp-cache:
   intent-parser-model:

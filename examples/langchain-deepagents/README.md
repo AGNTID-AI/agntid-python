@@ -13,9 +13,11 @@ to the SDK checkout two directories above it.
 
 ## Evaluator quick start — three steps
 
-Prerequisites: [`uv`](https://docs.astral.sh/uv/) and access to an AgntID MCP
-runtime containing the demo tools and policies. `uv` installs Python 3.11 and
-all Python dependencies in an isolated environment when required.
+Prerequisites: [`uv`](https://docs.astral.sh/uv/) and the runtime prepared by
+[the common end-to-end setup](../README.md). Continue only after its direct
+check can call `demo_add_numbers` and Reporting shows the allowed event. `uv`
+installs Python 3.11 and all Python dependencies in an isolated environment
+when required.
 
 ### 1. Get the example
 
@@ -37,6 +39,18 @@ default targets the local AgntID development runtime. `OPENAI_API_KEY` is not
 needed for the deterministic evaluation below; add it only for interactive
 model-driven chat.
 
+When the runtime requires OAuth, set the raw token obtained by your trusted
+application. Do not include the `Bearer` prefix:
+
+```dotenv
+AGNTID_ACCESS_TOKEN=<current OAuth access token>
+```
+
+The bridge adds the authorization header only at the MCP transport boundary;
+it does not place the token in graph state, prompts, memory, evidence files, or
+tool arguments. Leave the value empty for an approved local runtime that allows
+unauthenticated client access.
+
 ### 3. Run the safe evaluation
 
 ```bash
@@ -48,6 +62,10 @@ uv run --python 3.11 agntid-poc \
 
 There is no separate install or `uv sync` step: `uv run` installs this example,
 its LangChain dependencies, and the enclosing AgntID SDK automatically.
+
+Expected checkpoints include a `demo_add_numbers` tool call, an allowed policy
+decision, a business result of `33`, and task/correlation identifiers. Confirm
+the same allowed event in AgntID Reporting.
 
 ## What a successful evaluation proves
 
@@ -124,6 +142,11 @@ uv run --python 3.11 agntid-poc framework-smoke --framework langchain
 uv run --python 3.11 --extra dev pytest -q
 ```
 
+The tests use fakes for model and MCP boundaries and do not require AWS,
+OpenAI, an AgntID runtime, or an access token. The deterministic
+`framework-smoke` and `delegation-smoke` commands do connect to the configured
+AgntID runtime.
+
 For the detailed design and broader experiment set, see
 [architecture](docs/architecture.md), [scenarios](docs/scenarios.md), and the
 [engineering demo](docs/engineering-demo.md).
@@ -132,6 +155,8 @@ For the detailed design and broader experiment set, see
 
 - Connection errors: verify `AGNTID_MCP_URL` and confirm the runtime MCP health
   endpoint is reachable from the evaluator's machine.
+- OAuth 401 responses: provide a current raw `AGNTID_ACCESS_TOKEN` without the
+  `Bearer` prefix and confirm it was issued for the AgntID protected resource.
 - Missing `demo_*` tools: synchronize the runtime tool catalog and policies
   before running the example.
 - Model authentication errors: `OPENAI_API_KEY` is required only by
@@ -139,3 +164,6 @@ For the detailed design and broader experiment set, see
 - A denied tool call is not necessarily an example failure. Check the displayed
   AgntID policy reason and correlation ID; some diagnostic scenarios
   intentionally exercise denial paths.
+- Never derive `--user-id`, `--agent-id`, delegation scope, or approval evidence
+  from model output. Production services must load them from verified sessions
+  and trusted deployment configuration.

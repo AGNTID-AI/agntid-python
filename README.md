@@ -99,13 +99,43 @@ Or use **Install from source** / **Editable install** for the latest from `main`
 
 ---
 
+## End-to-end framework setup
+
+New users should start with [the shared example setup](examples/README.md). It
+contains the exact commands to:
+
+1. start the checked-in AgntID Runtime 2.0.0 Compose deployment;
+2. register it with a portal bootstrap token;
+3. review the protection profile and verify `demo_add_numbers`;
+4. configure open or OAuth-protected MCP access; and
+5. verify each framework without calling a model provider.
+
+After that common check, choose a complete guide:
+
+| Framework | Guide | First readiness check |
+| --- | --- | --- |
+| Microsoft Semantic Kernel | [MSK](examples/msk/README.md) | Build the MSK plugin against the live runtime without a model |
+| LangChain and Deep Agents | [LangChain/Deep Agents](examples/langchain-deepagents/README.md) | Run deterministic LangChain or Deep Agents tool calling |
+| Amazon Bedrock AgentCore | [AgentCore](examples/agentcore/README.md) | Run AWS-free contract tests, then a local direct runtime smoke |
+
+The repository guides are self-contained for the integration path, but the
+external services still require their own credentials: AgntID portal/registry
+access, a provider key for model-driven examples, and AWS credentials only when
+deploying AgentCore.
+
+---
+
 ## Quick start
 
 ```python
+import os
 import agntid
 
 # 1. Connect to the AgntID MCP proxy
-mcp_client = agntid.AgntidMCPClient("http://localhost:8082/mcp")
+mcp_client = agntid.AgntidMCPClient(
+    "http://localhost:8082/mcp",
+    access_token=os.getenv("AGNTID_ACCESS_TOKEN") or None,
+)
 
 async with mcp_client:
     tools = await agntid.get_tools_list(mcp_client)
@@ -153,7 +183,7 @@ python msk_demo.py --help
 
 | Function | Description |
 |----------|-------------|
-| `agntid.AgntidMCPClient(url)` | MCP client that wraps FastMCP (no direct `fastmcp` import needed) |
+| `agntid.AgntidMCPClient(url, access_token=None)` | MCP client that wraps FastMCP; pass a raw OAuth access token when runtime client access requires it |
 | `agntid.wrap_client(client, task_id=None)` | Returns a wrapper that injects `_task_id` and strips `__agntid_*` from responses; call `set_task_id(task_id)` before tool calls |
 | `agntid.create_task(agent_id, user_id, prompt)` | Generates a task ID and registers task metadata |
 | `agntid.close_task(task_id)` | Sends task close to the platform |
@@ -223,6 +253,7 @@ agntid-python/        # repo root
     _platform.py     # Wire format internals
     py.typed         # PEP 561 type marker
   examples/
+    README.md         # Shared runtime, authentication, and readiness setup
     agentcore/        # AgentCore Runtime + LangGraph example with AWS-free tests
     langchain-deepagents/ # Full multi-agent example with a three-step evaluator quick start
     msk/             # MSK + OpenAI demo (see examples/msk/README.md)
@@ -231,6 +262,7 @@ agntid-python/        # repo root
     unit/
     integration/
   pyproject.toml     # Package metadata, deps, build config
+  docker-compose.yml # Customer runtime 2.0.0 quick-start deployment
   Makefile           # build, test, clean, install-dev targets
   LICENSE            # MIT
   CHANGELOG.md       # Release history
