@@ -118,10 +118,11 @@ After that common check, choose a complete guide:
 | LangChain and Deep Agents | [LangChain/Deep Agents](examples/langchain-deepagents/README.md) | Run deterministic LangChain or Deep Agents tool calling |
 | Amazon Bedrock AgentCore | [AgentCore](examples/agentcore/README.md) | Run AWS-free contract tests, then a local direct runtime smoke |
 
-The repository guides are self-contained for the integration path, but the
-external services still require their own credentials: AgntID portal/registry
-access, a provider key for model-driven examples, and AWS credentials only when
-deploying AgentCore.
+The repository guides are self-contained for the integration path. The runtime
+images are public on GitHub Container Registry and do not require registry
+credentials. External services still require their own credentials: AgntID
+portal access, a provider key for model-driven examples, and AWS credentials
+only when deploying AgentCore.
 
 ---
 

@@ -7,12 +7,12 @@ the same known-good runtime state.
 
 ## What you need
 
-- an AgntID portal account with container-registry access;
+- an AgntID portal account for registering the runtime;
 - Docker 20.10+ with Docker Compose v2;
 - Python 3.11 recommended for all examples (MSK supports 3.10; `uv` can install
   Python for the LangChain and AgentCore projects);
 - approximately 4 GB RAM and 5 GB free disk space;
-- outbound HTTPS access to the AgntID registry, control plane, and the model
+- outbound HTTPS access to `ghcr.io`, the AgntID control plane, and the model
   provider used by your chosen framework.
 
 The first runtime start downloads an approximately 900 MB intent model and can
@@ -39,20 +39,19 @@ In the AgntID portal:
 3. Do not put the bootstrap token in a shell command, source file, screenshot,
    ticket, or log.
 
-From the `agntid-python` repository root, sign in and start runtime 2.0.0:
+From the `agntid-python` repository root, start runtime 2.0.0. The runtime
+images are public on GitHub Container Registry, so no registry login is
+required:
 
 ```bash
-docker login registry.agntid.ai
 docker compose up -d
 docker compose ps
 ```
 
-For staging or another AgntID instance, set its domain for both registry login
-and startup:
+For staging or another AgntID instance, set its domain before startup:
 
 ```bash
 export DOMAIN=staging.agntid.ai
-docker login "registry.${DOMAIN}"
 docker compose up -d
 ```
 
