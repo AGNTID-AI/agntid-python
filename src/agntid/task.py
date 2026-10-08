@@ -11,6 +11,7 @@ from contextlib import asynccontextmanager
 from typing import Any, Callable, Mapping
 
 from agntid.client import call_tool_async
+from agntid.intent import TaskOpenResult, parse_task_open_details
 from agntid._platform import (
     build_task_close_notification,
     build_task_close_tool_call,
@@ -110,12 +111,30 @@ def parse_task_open_result(result: Any) -> tuple[bool, str]:
     :param result: Raw result from send_task_open (dict or object with structured_content).
     :returns: (ok, message) — ok is True if task open was accepted; message is reason or empty.
     """
-    result_dict = result if isinstance(result, dict) else getattr(result, "structured_content", None) or {}
-    if not isinstance(result_dict, dict):
-        return (True, "")
-    if result_dict.get("ok") is False:
-        return (False, str(result_dict.get("reason", result_dict)))
-    return (True, "")
+    details = parse_task_open_details(result)
+    return (details.ok, details.reason)
+
+
+async def send_task_open_details(
+    client: Any,
+    task_id: str,
+    agent_id: str,
+    user_id: str,
+    prompt: str,
+    *,
+    execution_context: Any | None = None,
+) -> TaskOpenResult:
+    """Open a task and retain its prompt-aware intent snapshot."""
+
+    result = await send_task_open(
+        client,
+        task_id,
+        agent_id,
+        user_id,
+        prompt,
+        execution_context=execution_context,
+    )
+    return parse_task_open_details(result)
 
 
 async def send_task_open_checked(

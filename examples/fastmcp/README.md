@@ -32,17 +32,14 @@ requires four changes. Everything else stays the same.
 import agntid
 ```
 
-### 2. Replace your MCP client and build OpenAI tool defs
+### 2. Replace your MCP client and load profile-visible tools
 
 ```python
 mcp_client = agntid.AgntidMCPClient(mcp_url)
 
 async with mcp_client:
-    tools_list = await agntid.get_tools_list(mcp_client)
+    visible_tools = await agntid.get_tools_list(mcp_client)
     wrapped = agntid.wrap_client(mcp_client)
-
-    # Convert MCP tools to OpenAI function definitions
-    openai_tools = [...]  # see openai_demo.py for the conversion helper
 ```
 
 ### 3. Wrap each user prompt in a task
@@ -50,12 +47,14 @@ async with mcp_client:
 ```python
 task_id = agntid.create_task(agent_id, user_id, user_prompt)
 async with agntid.task_context(mcp_client, task_id):
-    ok, msg = await agntid.send_task_open_checked(
+    task_open = await agntid.send_task_open_details(
         mcp_client, task_id, agent_id, user_id, user_prompt,
     )
-    if not ok:
-        print(f"Task OPEN rejected: {msg}")
+    if not task_open.ok:
+        print(f"Task OPEN rejected: {task_open.reason}")
         continue
+    task_tools = agntid.filter_tools_for_task(visible_tools, task_open)
+    openai_tools = [...]  # convert task_tools; see openai_demo.py
     wrapped.set_task_id(task_id)
 
     # ... run your chat completion loop, calling tools via wrapped ...
@@ -82,10 +81,11 @@ if denial:
 
 1. `AgntidMCPClient` connects to the AgntID MCP proxy (wraps fastmcp
    internally so your code has no direct fastmcp dependency).
-2. MCP tools are converted to OpenAI function-calling format (name
-   sanitization, parameter schema mapping).
+2. Task open asks the runtime to analyze the prompt and return its relevant-tool
+   shortlist. Only that shortlist is converted to OpenAI function definitions.
 3. `wrap_client` injects `_task_id` into every tool call and strips
    `__agntid_*` fields from responses before the LLM sees them.
-4. `create_task` + `send_task_open_checked` register the intent on the proxy.
+4. `create_task` + `send_task_open_details` register the intent and preserve its
+   task analysis for the application.
 5. `task_context` sends `task_close` automatically when the block exits.
 6. The proxy correlates each tool call to the prompt and enforces policy.

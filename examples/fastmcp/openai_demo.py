@@ -77,13 +77,13 @@ async def run(args: argparse.Namespace):
 
     # -- 1. Connect to the AgntID MCP proxy ------------------------------------
 
-    mcp_client = agntid.AgntidMCPClient(mcp_url)
+    mcp_client = agntid.AgntidMCPClient(
+        mcp_url,
+        access_token=os.getenv("AGNTID_ACCESS_TOKEN") or None,
+    )
     async with mcp_client:
         tools_list = await agntid.get_tools_list(mcp_client)
         wrapped = agntid.wrap_client(mcp_client)
-
-        # Build OpenAI function definitions from MCP tools
-        openai_tools, name_map = _mcp_tools_to_openai(tools_list)
         _print_banner(registered_id, user_id, tools_list)
 
         # -- 2. Prompt loop: one task per prompt --------------------------------
@@ -105,13 +105,21 @@ async def run(args: argparse.Namespace):
 
             task_id = agntid.create_task(registered_id, user_id, user_prompt, sender=None)
             async with agntid.task_context(mcp_client, task_id):
-                ok, msg = await agntid.send_task_open_checked(
+                task_open = await agntid.send_task_open_details(
                     mcp_client, task_id, registered_id, user_id, user_prompt,
                 )
-                if not ok:
-                    print(f"[task] OPEN rejected: {msg}", file=sys.stderr)
+                if not task_open.ok:
+                    print(f"[task] OPEN rejected: {task_open.reason}", file=sys.stderr)
                     continue
                 wrapped.set_task_id(task_id)
+
+                try:
+                    task_tools = agntid.filter_tools_for_task(tools_list, task_open)
+                except agntid.IntentPreparationError as exc:
+                    print(f"[intent] {exc}", file=sys.stderr)
+                    continue
+                openai_tools, name_map = _mcp_tools_to_openai(task_tools)
+                _print_intent(task_open, task_tools)
 
                 # Chat completion loop (handles multi-turn tool calls)
                 assistant_msg = await _chat_loop(
@@ -205,7 +213,13 @@ def _mcp_tools_to_openai(tools: list) -> tuple[list[dict], dict[str, str]]:
     Returns (openai_tools, name_map) where name_map maps OpenAI-safe
     names back to the original MCP names (e.g. awsS3_list_buckets -> awsS3.list_buckets).
     """
-    exclude = {agntid.TASK_OPEN_TOOL, agntid.TASK_CLOSE_TOOL}
+    exclude = {
+        agntid.TASK_OPEN_TOOL,
+        agntid.TASK_CLOSE_TOOL,
+        agntid.DELEGATION_OPEN_TOOL,
+        agntid.DELEGATION_CLOSE_TOOL,
+        agntid.ACTION_UPDATE_TOOL,
+    }
     result = []
     name_map: dict[str, str] = {}
 
@@ -262,6 +276,28 @@ def _print_banner(registered_id: str, user_id: str, tools: list) -> None:
     print("---")
     print()
     sys.stdout.flush()
+
+
+def _print_intent(task_open: agntid.TaskOpenResult, tools: list) -> None:
+    snapshot = task_open.snapshot
+    if snapshot is None:
+        return
+    eligible = task_open.eligible_tool_count
+    relevant = task_open.relevant_tool_count
+    print(
+        f"[intent] engine={snapshot.engine_id or 'unknown'} "
+        f"eligible={eligible if eligible is not None else '?'} "
+        f"relevant={relevant if relevant is not None else len(tools)}",
+        file=sys.stderr,
+    )
+    for task in snapshot.tasks:
+        instruction = str(task.get("instruction") or "").strip()
+        if instruction:
+            print(f"[intent] task: {instruction}", file=sys.stderr)
+    for constraint in snapshot.constraints:
+        print(f"[intent] constraint: {constraint}", file=sys.stderr)
+    names = ", ".join(getattr(tool, "name", "") for tool in tools) or "(none)"
+    print(f"[intent] model tools: {names}", file=sys.stderr)
 
 
 def _ask_continue() -> bool:

@@ -128,6 +128,10 @@ only when deploying AgentCore.
 
 ## Quick start
 
+The prompt-aware binding path below requires task intent preparation on the
+runtime. If preparation is unavailable, the SDK stops instead of exposing the
+broader profile-visible tool list.
+
 ```python
 import os
 import agntid
@@ -139,20 +143,25 @@ mcp_client = agntid.AgntidMCPClient(
 )
 
 async with mcp_client:
-    tools = await agntid.get_tools_list(mcp_client)
+    visible_tools = await agntid.get_tools_list(mcp_client)
     wrapped = agntid.wrap_client(mcp_client)
 
     # 2. For each user prompt — open a task
     task_id = agntid.create_task(agent_id="my-agent", user_id="user-123", prompt=user_prompt)
 
     async with agntid.task_context(mcp_client, task_id):
-        ok, msg = await agntid.send_task_open_checked(
+        task_open = await agntid.send_task_open_details(
             mcp_client, task_id, "my-agent", "user-123", user_prompt,
         )
+        if not task_open.ok:
+            raise RuntimeError(task_open.reason)
+        task_tools = agntid.filter_tools_for_task(visible_tools, task_open)
         wrapped.set_task_id(task_id)
 
-        # 3. Call tools through the wrapped client (task_id injected, __agntid_* stripped)
-        result = await wrapped.call_tool_async("my_tool", {"arg": "value"})
+        # 3. Give only task_tools to the model, then execute its selected call
+        # through the wrapped client (task_id injected, __agntid_* stripped).
+        selected_name, selected_args = await plan_with_model(user_prompt, task_tools)
+        result = await wrapped.call_tool_async(selected_name, selected_args)
     # task_close sent automatically when the block exits
 ```
 
@@ -168,6 +177,7 @@ Each example has its own README with step-by-step integration instructions.
 | **MSK + OpenAI** | [`examples/msk/`](examples/msk/) | ChatCompletionAgent via Semantic Kernel with kernel plugin |
 | **Amazon Bedrock AgentCore + LangGraph** | [`examples/agentcore/`](examples/agentcore/) | Current AgentCore CLI project, OAuth bearer handoff, protected tools, AWS-free tests, and deployment configuration |
 | **OpenAI + FastMCP** | [`examples/fastmcp/`](examples/fastmcp/) | OpenAI client with function-calling directly (no MSK) |
+| **Intent shortlist, no model** | [`examples/direct/intent_shortlist.py`](examples/direct/intent_shortlist.py) | Prints task analysis and the prompt-specific tool shortlist before one protected call |
 
 The compact MSK and FastMCP examples use this CLI interface:
 
@@ -190,6 +200,8 @@ python msk_demo.py --help
 | `agntid.close_task(task_id)` | Sends task close to the platform |
 | `agntid.task_context(client, task_id)` | Async context manager — sends `task_close` on exit |
 | `agntid.send_task_open_checked(...)` | Opens a task and returns `(ok, message)` |
+| `agntid.send_task_open_details(...)` | Opens a task and returns the typed intent snapshot and shortlist counts |
+| `agntid.filter_tools_for_task(tools, task_open)` | Narrows profile-visible tools to the prompt-specific runtime shortlist; fails closed when preparation is unavailable |
 | `agntid.get_tools_list(client)` | Lists tools from any MCP client |
 | `agntid.get_last_denial(clear=True)` | Returns the last policy/task denial (if any) |
 | `agntid.format_denial(denial)` | Formats a denial dict into a human-readable string |

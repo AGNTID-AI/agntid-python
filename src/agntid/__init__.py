@@ -24,6 +24,13 @@ from agntid.display import (
     print_tools,
 )
 from agntid.mcp_wrapper import wrap_client
+from agntid.intent import (
+    IntentPreparationError,
+    TaskIntentSnapshot,
+    TaskOpenResult,
+    filter_tools_for_task,
+    parse_task_open_details,
+)
 from agntid.context import (
     ApprovalEvidence,
     ConversationContext,
@@ -51,6 +58,7 @@ from agntid.task import (
     send_delegation_close,
     send_delegation_open,
     send_task_open,
+    send_task_open_details,
     send_task_open_checked,
     task_context,
     task_open_arguments,
@@ -66,9 +74,15 @@ __all__ = [
     "close_task",
     "wrap_client",
     "send_task_open",
+    "send_task_open_details",
     "send_task_close",
     "send_task_open_checked",
     "parse_task_open_result",
+    "parse_task_open_details",
+    "filter_tools_for_task",
+    "IntentPreparationError",
+    "TaskIntentSnapshot",
+    "TaskOpenResult",
     "task_context",
     "TASK_OPEN_TOOL",
     "TASK_CLOSE_TOOL",

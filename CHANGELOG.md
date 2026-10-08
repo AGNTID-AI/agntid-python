@@ -7,6 +7,9 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [0.2.0] - Unreleased
 
 ### Added
+- Typed task-intent snapshots and fail-closed prompt-aware tool filtering.
+- Model-free intent-shortlist and OpenAI dynamic-tool-binding examples.
+- `AGENTS.md` integration rules for humans and coding assistants.
 - Framework-neutral execution, plan, delegation, action, and approval context.
 - LangChain and Deep Agents adapter plus a locked, runnable example project.
 - Delegation and action lifecycle helpers.
