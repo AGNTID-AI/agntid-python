@@ -23,7 +23,7 @@
 
 services:
   achr-runtime:
-    image: ${ACHR_RUNTIME_IMAGE:-ghcr.io/agntid-ai/achr-runtime@sha256:c333cb353ec0682950c3be60eaf40ecab95961cd6403e3a61f4253b662feead3}
+    image: ${ACHR_RUNTIME_IMAGE:-ghcr.io/agntid-ai/achr-runtime:main}
     restart: unless-stopped
     ports:
       - "${RUNTIME_PORT:-8080}:8080"
@@ -78,7 +78,7 @@ services:
         condition: service_healthy
 
   achr-intent-parser:
-    image: ${ACHR_INTENT_PARSER_IMAGE:-ghcr.io/agntid-ai/intent-parser-ml@sha256:47517ec31685c8b0d8aa2f3c3bb4c5db7dc130099e41d892fc86dd34bf7a9391}
+    image: ${ACHR_INTENT_PARSER_IMAGE:-ghcr.io/agntid-ai/intent-parser-ml:main}
     restart: unless-stopped
     stop_grace_period: 600s
     expose:
