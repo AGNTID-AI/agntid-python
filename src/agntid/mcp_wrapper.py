@@ -39,6 +39,32 @@ def _extract_result_dict(d: dict[str, Any]) -> Any:
     return _strip_keys(d)
 
 
+def _serialize_content_block(block: Any) -> Any:
+    """Return an MCP content block without collapsing its native fields."""
+    if isinstance(block, dict):
+        return _strip_keys(block)
+    model_dump = getattr(block, "model_dump", None)
+    if callable(model_dump):
+        return _strip_keys(model_dump(by_alias=True, exclude_none=True))
+    legacy_dump = getattr(block, "dict", None)
+    if callable(legacy_dump):
+        return _strip_keys(legacy_dump(by_alias=True, exclude_none=True))
+    return block
+
+
+def _parsed_text_object(block: Any) -> dict[str, Any] | None:
+    text = block.get("text") if isinstance(block, dict) else getattr(block, "text", None)
+    if not isinstance(text, str) or not text.strip():
+        return None
+    try:
+        import json
+
+        parsed = json.loads(text)
+    except (ValueError, TypeError):
+        return None
+    return parsed if isinstance(parsed, dict) else None
+
+
 def strip_platform_fields(obj: Any) -> Any:
     """
     Extract the clean tool result from a runtime response.
@@ -48,26 +74,41 @@ def strip_platform_fields(obj: Any) -> Any:
     - Plain dicts with __agntid_result / __agntid_* keys
     - Lists and other values (traversed recursively)
     """
-    sc = getattr(obj, "structured_content", None)
-    if sc is not None and isinstance(sc, dict):
-        inner = sc.get("result", sc)
-        if isinstance(inner, dict):
-            return _extract_result_dict(inner)
-        return _strip_keys(sc)
-
     content = getattr(obj, "content", None)
     if content is not None and isinstance(content, list) and not isinstance(obj, (dict, list, str)):
+        sc = getattr(obj, "structured_content", None)
+        if sc is None:
+            sc = getattr(obj, "structuredContent", None)
+
+        if isinstance(sc, dict):
+            inner = sc.get("result", sc)
+            if isinstance(inner, dict) and RESULT_KEY in inner:
+                return _extract_result_dict(inner)
+
         for item in content:
-            text = getattr(item, "text", None)
-            if text and isinstance(text, str):
-                try:
-                    import json
-                    parsed = json.loads(text)
-                    if isinstance(parsed, dict):
-                        return _extract_result_dict(parsed)
-                except (ValueError, TypeError):
-                    pass
-        return obj
+            parsed = _parsed_text_object(item)
+            if parsed is not None and RESULT_KEY in parsed:
+                return _extract_result_dict(parsed)
+
+        # Retain legacy convenience for a single plain JSON text result while
+        # preserving the native MCP envelope whenever it carries multiple
+        # blocks, structured content, or an intentionally empty content list.
+        if len(content) == 1 and sc is None:
+            parsed = _parsed_text_object(content[0])
+            if parsed is not None:
+                return _extract_result_dict(parsed)
+
+        clean: dict[str, Any] = {
+            "content": [_serialize_content_block(item) for item in content],
+        }
+        if sc is not None:
+            clean["structuredContent"] = _strip_keys(sc)
+        is_error = getattr(obj, "is_error", None)
+        if is_error is None:
+            is_error = getattr(obj, "isError", None)
+        if is_error is not None:
+            clean["isError"] = bool(is_error)
+        return clean
 
     if isinstance(obj, dict):
         return _extract_result_dict(obj)

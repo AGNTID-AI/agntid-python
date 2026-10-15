@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+from types import SimpleNamespace
+
 import pytest
+from mcp.types import CallToolResult
 
 from agntid import wrap_client
 
@@ -91,3 +94,59 @@ def test_wrap_client_supports_explicit_legacy_argument_names() -> None:
             {"_task_id": "task-123", "_delegation_id": "delegation-456"},
         )
     ]
+
+
+class NativeResultClient:
+    def __init__(self, result: object) -> None:
+        self.result = result
+
+    def call_tool(self, _name: str, _arguments: dict[str, object]) -> object:
+        return self.result
+
+
+def test_wrap_client_preserves_ordered_content_and_structured_content() -> None:
+    native_result = CallToolResult.model_validate({
+        "content": [
+            {"type": "text", "text": "first"},
+            {"type": "image", "data": "Zm9v", "mimeType": "image/png"},
+            {"type": "resource", "resource": {
+                "uri": "file:///item.txt", "mimeType": "text/plain", "text": "last",
+            }},
+        ],
+        "structuredContent": {"count": 3},
+        "isError": False,
+    })
+
+    result = wrap_client(NativeResultClient(native_result)).call_tool("example", {})
+
+    assert [block["type"] for block in result["content"]] == [
+        "text", "image", "resource",
+    ]
+    assert result["structuredContent"] == {"count": 3}
+    assert result["isError"] is False
+
+
+def test_wrap_client_preserves_empty_content_with_structured_content() -> None:
+    native_result = CallToolResult(
+        content=[], structuredContent={"count": 0}, isError=False
+    )
+
+    result = wrap_client(NativeResultClient(native_result)).call_tool("example", {})
+
+    assert result == {
+        "content": [],
+        "structuredContent": {"count": 0},
+        "isError": False,
+    }
+
+
+def test_wrap_client_keeps_legacy_single_json_text_convenience() -> None:
+    native_result = SimpleNamespace(
+        content=[SimpleNamespace(text='{"value": "ok"}')],
+        structured_content=None,
+        is_error=False,
+    )
+
+    result = wrap_client(NativeResultClient(native_result)).call_tool("example", {})
+
+    assert result == {"value": "ok"}
