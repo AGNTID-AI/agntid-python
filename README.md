@@ -195,7 +195,7 @@ python msk_demo.py --help
 | Function | Description |
 |----------|-------------|
 | `agntid.AgntidMCPClient(url, access_token=None)` | MCP client that wraps FastMCP; pass a raw OAuth access token when runtime client access requires it |
-| `agntid.wrap_client(client, task_id=None)` | Returns a wrapper that injects `_task_id` and strips `__agntid_*` from responses; call `set_task_id(task_id)` before tool calls |
+| `agntid.wrap_client(client, task_id=None)` | Returns a wrapper that injects canonical `agntid_task_id` and strips `__agntid_*` from responses; call `set_task_id(task_id)` before tool calls. Legacy runtimes can override `task_argument="_task_id"` explicitly. |
 | `agntid.create_task(agent_id, user_id, prompt)` | Generates a task ID and registers task metadata |
 | `agntid.close_task(task_id)` | Sends task close to the platform |
 | `agntid.task_context(client, task_id)` | Async context manager — sends `task_close` on exit |

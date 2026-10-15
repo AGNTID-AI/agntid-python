@@ -29,7 +29,7 @@ src/agntid/
   __init__.py        Public API, __version__
   client.py          AgntidMCPClient, get_tools_list, call_tool_async
   task.py            create_task, send_task_open, task_context, close_task
-  mcp_wrapper.py     wrap_client — _task_id injection, __agntid_* stripping
+  mcp_wrapper.py     wrap_client — task-context injection, __agntid_* stripping
   denial.py          Denial parsing, storage, formatting (framework-agnostic)
   util.py            require_env, format_tools_display
   _platform.py       Wire format: JSON-RPC message builders (spec 037)
@@ -43,7 +43,7 @@ src/agntid/
 |-------|---------|---------|
 | **Transport** | `client.py` | `AgntidMCPClient` wraps FastMCP so customer code has no direct `fastmcp` import |
 | **Task lifecycle** | `task.py`, `_platform.py` | Generate `task_id`, send task open/close over MCP, async context manager |
-| **Tool wrapper** | `mcp_wrapper.py` | Injects `_task_id` into every tool call, strips `__agntid_*` from responses |
+| **Tool wrapper** | `mcp_wrapper.py` | Injects `agntid_task_id` into every tool call, strips `__agntid_*` from responses |
 | **Denial handling** | `denial.py` | Detects policy/task denials, parses structured JSON, formats human-readable summaries |
 | **Framework adapters** | `msk.py` | Builds MSK kernel plugin from MCP tools; handles name sanitization, parameter schemas |
 | **Utilities** | `util.py` | Environment checks, tool display formatting |
@@ -86,7 +86,7 @@ agntid_task_close { task_id }
 
 `wrap_client(mcp_client, task_id)` returns a client that:
 
-1. **Adds** `_task_id` to every tool call's arguments (the runtime uses it
+1. **Adds** `agntid_task_id` to every tool call's arguments (the runtime uses it
    for correlation and policy, then strips it before the real tool sees it).
 2. **Strips** any `__agntid_*` fields from the response (execution flow,
    policy decision, intent validation) so the LLM only sees tool output.
@@ -123,7 +123,7 @@ User                Agent (your code)           SDK                    AgntID MC
  │                       │── wrapped.call_tool ─>│                          │                       │
  │                       │                       │── add_numbers            │                       │
  │                       │                       │   { a:11, b:21,          │                       │
- │                       │                       │     _task_id: tid }  ───>│                       │
+ │                       │                       │     agntid_task_id: tid }│                       │
  │                       │                       │                          │── policy check ──────>│
  │                       │                       │                          │   (task_id → prompt    │
  │                       │                       │                          │    → user → policy)    │
@@ -150,9 +150,9 @@ User                Agent (your code)           SDK                    AgntID MC
 
 | Field | Source | Purpose |
 |-------|--------|---------|
-| `_task_id` | SDK wrapper | Correlate this call to the task (and thus prompt + user) |
+| `agntid_task_id` | SDK wrapper | Correlate this call to the task (and thus prompt + user) |
 | `tool_name` | Agent/LLM | Which tool is being called |
-| `arguments` | Agent/LLM | Tool parameters (minus `_task_id` which the runtime strips) |
+| `arguments` | Agent/LLM | Tool parameters (minus `agntid_task_id` which the runtime strips) |
 
 ### What the runtime returns (and SDK strips)
 
@@ -181,7 +181,7 @@ User A (session 1)                  User B (session 2)
    │   user_id = alice                  │   user_id = bob
    │                                    │
    │── tool: awsS3.list_buckets         │── tool: add_numbers
-   │   _task_id = aaa-111               │   _task_id = bbb-222
+   │   agntid_task_id = aaa-111         │   agntid_task_id = bbb-222
    │                                    │
    │   Runtime correlates:              │   Runtime correlates:
    │   task aaa → alice → "list..."     │   task bbb → bob → "add..."
@@ -247,15 +247,15 @@ A single prompt may trigger multiple tool calls. All share the same `task_id`:
 Prompt: "List my S3 buckets and show the first object in each"
 task_id: abc-123
 
-  ┌─ tool call 1: awsS3.list_buckets     _task_id=abc-123 ─── policy ✓ ──→ result
+  ┌─ tool call 1: awsS3.list_buckets     agntid_task_id=abc-123 ─── policy ✓ ──→ result
   │
-  ├─ tool call 2: awsS3.list_objects      _task_id=abc-123 ─── policy ✓ ──→ result
+  ├─ tool call 2: awsS3.list_objects      agntid_task_id=abc-123 ─── policy ✓ ──→ result
   │  (bucket_name=bucket-1)
   │
-  ├─ tool call 3: awsS3.list_objects      _task_id=abc-123 ─── policy ✗ ──→ DENIED
+  ├─ tool call 3: awsS3.list_objects      agntid_task_id=abc-123 ─── policy ✗ ──→ DENIED
   │  (bucket_name=restricted-bucket)
   │
-  └─ task_close                           _task_id=abc-123
+  └─ task_close                           task_id=abc-123
 
 Runtime audit trail for task abc-123:
   prompt:  "List my S3 buckets and show the first object in each"
@@ -283,7 +283,7 @@ Runtime audit trail for task abc-123:
 For each tool call, the runtime evaluates a pipeline:
 
 ```
-Tool call arrives with _task_id
+Tool call arrives with agntid_task_id
         │
         ▼
 ┌─ 1. Task resolution ─────────────────────────────────────┐
@@ -356,7 +356,7 @@ with fields: `reason`, `policy_name`, `intent_mismatch`, `denial_step`.
 }
 ```
 
-### Tool call (with _task_id injected by wrapper)
+### Tool call (with agntid_task_id injected by wrapper)
 
 ```json
 {
@@ -364,12 +364,12 @@ with fields: `reason`, `policy_name`, `intent_mismatch`, `denial_step`.
   "arguments": {
     "a": 11,
     "b": 21,
-    "_task_id": "abc-123"
+    "agntid_task_id": "abc-123"
   }
 }
 ```
 
-The runtime strips `_task_id` before forwarding to the tool server.
+The runtime strips `agntid_task_id` before forwarding to the tool server.
 
 ---
 

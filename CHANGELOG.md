@@ -19,6 +19,9 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   maintained framework path.
 
 ### Changed
+- `wrap_client` now defaults to the canonical `agntid_task_id` and
+  `agntid_delegation_id` correlation fields. Legacy argument names remain
+  available through explicit overrides.
 - Framework dependencies are optional again; use `[msk]` or `[openai]` as needed.
 - The Semantic Kernel plugin excludes all AgntID runtime control tools by default.
 - The direct smoke example uses `demo_add_numbers(first_number, second_number)`.

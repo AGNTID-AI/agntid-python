@@ -1,5 +1,5 @@
 """
-MCP tool-call wrapper: inject _task_id into requests and strip __agntid_* from responses.
+MCP tool-call wrapper: inject task context into requests and strip platform fields.
 """
 
 from __future__ import annotations
@@ -84,15 +84,15 @@ def wrap_client(
     task_id: str | None = None,
     delegation_id: str | None = None,
     *,
-    task_argument: str = "_task_id",
-    delegation_argument: str = "_delegation_id",
+    task_argument: str = "agntid_task_id",
+    delegation_argument: str = "agntid_delegation_id",
 ) -> T:
     """
-    Wrap an MCP client so that every tool call includes _task_id and responses
+    Wrap an MCP client so that every tool call includes agntid_task_id and responses
     have __agntid_* fields stripped. Returns an object that implements the same
     interface as the client (or a documented subset).
 
-    The wrapper adds _task_id to the tool arguments (037 Option B) and strips
+    The wrapper adds agntid_task_id to the tool arguments and strips
     any response field whose name matches __agntid_* before returning to the caller.
     Errors are propagated without stripping.
 
@@ -101,6 +101,10 @@ def wrap_client(
 
     :param client: The MCP client (or tool-call interface) to wrap.
     :param task_id: Optional initial task ID; default None. Set via set_task_id() if not provided.
+    :param task_argument: Task-correlation argument name. Override with
+        ``_task_id`` only when connecting to a legacy runtime.
+    :param delegation_argument: Delegation-correlation argument name. Override
+        with ``_delegation_id`` only when connecting to a legacy runtime.
     :returns: A wrapped instance; use it for all tool calls in this run.
     """
     return _WrappedClient(
@@ -113,7 +117,7 @@ def wrap_client(
 
 
 class _WrappedClient:
-    """Wraps an MCP client to add _task_id to tool calls and strip __agntid_* from responses."""
+    """Add application-controlled task context and strip platform response fields."""
 
     __slots__ = (
         "_client",
@@ -129,8 +133,8 @@ class _WrappedClient:
         task_id: str | None = None,
         delegation_id: str | None = None,
         *,
-        task_argument: str = "_task_id",
-        delegation_argument: str = "_delegation_id",
+        task_argument: str = "agntid_task_id",
+        delegation_argument: str = "agntid_delegation_id",
     ) -> None:
         self._client = client
         self._task_id = task_id
@@ -158,7 +162,7 @@ class _WrappedClient:
         return getattr(self._client, name)
 
     def call_tool(self, name: str, arguments: dict[str, Any] | None = None, **kwargs: Any) -> Any:
-        """Call a tool with _task_id injected into arguments; strip __agntid_* from response."""
+        """Call a tool with task context injected; strip platform fields from response."""
         args = self._inject_context(arguments)
         try:
             result = self._client.call_tool(name, args, **kwargs)
@@ -169,7 +173,7 @@ class _WrappedClient:
         return result
 
     async def call_tool_async(self, name: str, arguments: dict[str, Any] | None = None, **kwargs: Any) -> Any:
-        """Async tool call with _task_id and response stripping."""
+        """Async tool call with task context and response stripping."""
         args = self._inject_context(arguments)
         try:
             client = self._client

@@ -83,7 +83,7 @@ if denial:
    internally so your code has no direct fastmcp dependency).
 2. Task open asks the runtime to analyze the prompt and return its relevant-tool
    shortlist. Only that shortlist is converted to OpenAI function definitions.
-3. `wrap_client` injects `_task_id` into every tool call and strips
+3. `wrap_client` injects `agntid_task_id` into every tool call and strips
    `__agntid_*` fields from responses before the LLM sees them.
 4. `create_task` + `send_task_open_details` register the intent and preserve its
    task analysis for the application.
