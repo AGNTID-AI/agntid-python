@@ -1,6 +1,8 @@
 .PHONY: setup prepare test validate package dev deploy
 
 SDK_ROOT := ../..
+AGENT_PROJECT := app/AgntidAgent
+AGENT_PYTHON := $(AGENT_PROJECT)/.venv/bin/python
 SDK_WHEEL := app/AgntidAgent/vendor/agntid_sdk-0.2.0-py3-none-any.whl
 SDK_SOURCES := $(shell find $(SDK_ROOT)/src/agntid -type f)
 
@@ -14,7 +16,9 @@ $(SDK_WHEEL): $(SDK_ROOT)/pyproject.toml $(SDK_SOURCES)
 	test -f $(SDK_WHEEL)
 
 test: prepare
-	uv run --project app/AgntidAgent --extra dev pytest -q
+	uv sync --project $(AGENT_PROJECT) --extra dev --locked --no-install-package agntid-sdk
+	uv pip install --python $(AGENT_PYTHON) --no-deps --reinstall $(SDK_WHEEL)
+	uv run --project $(AGENT_PROJECT) --no-sync pytest -q
 
 validate: prepare
 	agentcore validate --directory .

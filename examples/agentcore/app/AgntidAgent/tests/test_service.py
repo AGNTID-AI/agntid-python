@@ -37,7 +37,7 @@ class FakeMCPClient:
                     "properties": {
                         "first_number": {"type": "integer"},
                         "second_number": {"type": "integer"},
-                        "_task_id": {"type": "string"},
+                        "agntid_task_id": {"type": "string"},
                     },
                     "required": ["first_number", "second_number"],
                 },
@@ -118,7 +118,7 @@ async def test_langgraph_path_opens_calls_and_closes_one_correlated_task():
         "agntid_task_close",
     ]
     assert calls[0][2]["user_id"] == "user-42"
-    assert calls[1][2]["_task_id"] == response["task_id"]
+    assert calls[1][2]["agntid_task_id"] == response["task_id"]
     assert "__agntid_trace_id" not in response["result"]
 
 

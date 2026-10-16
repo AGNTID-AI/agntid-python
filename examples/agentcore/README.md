@@ -87,6 +87,12 @@ task open/tool/task close ordering, correlation injection, result cleanup, and
 the no-model direct smoke path. They do not contact AWS, Bedrock, AgntID, or a
 model provider.
 
+`make test` keeps third-party dependencies pinned by `uv.lock`, skips only the
+generated `agntid-sdk` wheel during that sync, then reinstalls the freshly built
+wheel without resolving its dependencies again. This avoids a stale wheel hash
+while ensuring the tests exercise the current checkout rather than a previously
+installed SDK.
+
 ## Run a deterministic local runtime smoke
 
 This optional smoke uses AgentCore locally and calls `demo_add_numbers` through
@@ -216,10 +222,11 @@ make deploy
 ```
 
 The generated SDK wheel under `app/AgntidAgent/vendor/` is ignored by Git. The
-Make targets rebuild it when the SDK source changes and ensure the deployment
-ZIP contains the real `agntid` package rather than a checkout-only editable
-path. Run them from a complete repository checkout, not from a copied
-`examples/agentcore` directory.
+Make targets rebuild it when the SDK source changes. The test target preserves
+the committed lock for all other dependencies and installs this wheel directly;
+packaging targets ensure the deployment ZIP contains the real `agntid` package
+rather than a checkout-only editable path. Run them from a complete repository
+checkout, not from a copied `examples/agentcore` directory.
 
 Invoke the deployed runtime with a stable session ID and the two AgntID custom
 headers:
