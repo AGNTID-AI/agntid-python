@@ -34,8 +34,8 @@ package the SDK from this checkout.
 In the AgntID portal:
 
 1. Open **Runtimes** and select **Add Runtime**.
-2. Name the runtime, generate its one-time bootstrap token, and copy the token
-   immediately.
+2. Select **Generate Bootstrap Token** and copy the one-time token immediately.
+   The registration dialog does not ask for a runtime name.
 3. Do not put the bootstrap token in a shell command, source file, screenshot,
    ticket, or log.
 
@@ -63,10 +63,33 @@ curl --fail http://localhost:8080/health
 ```
 
 Open <http://localhost:8080>, enter the bootstrap token, and select **Connect
-to Control Plane**. In the portal, open the runtime's **Setup** tab, review the
-**Medium / READ_WRITE** protection profile, and wait for **5 of 5** checks plus
-**Runtime sync: Applied**. The built-in `demo_add_numbers` tool should now be
-visible.
+to Control Plane**. Return to **Runtimes**, match the new system-generated row
+by runtime ID, then use **Edit runtime name** to name it.
+
+Open the runtime's **Setup** tab, review the **Medium / READ_WRITE** protection
+profile, and wait for **5 of 5** checks plus **Runtime sync: Applied**. Setup
+completion does not enable demo servers or approve pending actions.
+
+Prepare the protected demo tool:
+
+1. Open **Operations → MCP → Servers**. Under **Demo tools**, select **Enable
+   demos** and wait for **Enabled**.
+2. Confirm **Runtime catalog acknowledgement** shows **Catalog verified** and
+   its desired and applied revisions match.
+3. Open **Access Control → Tools**, find **AgntID Starter Tools**, and select
+   **Review Actions**.
+4. Open `demo.add_numbers`. If it is `PENDING_REVIEW`, select **Approve
+   Classification**, enter the required reason, then select **Approve**.
+
+Approval creates and enables the action's baseline allow policy automatically;
+do not create a second baseline policy.
+
+5. Wait for runtime scope synchronization to show **Applied**.
+
+The protected MCP name `demo_add_numbers` should now be visible. If demo setup
+fails, expand **Technical details** to identify the blocking server, correct
+that connection, select **Retry**, and do not continue until the catalog is
+verified.
 
 The framework processes connect to:
 
@@ -148,7 +171,7 @@ continue with its direct-smoke section for a real local runtime call.
 | Compose service is unhealthy | Run `docker compose logs -f`; the intent model may still be downloading. |
 | Bootstrap token is rejected | Generate a fresh token for the same portal instance and enter it only in the local runtime UI. |
 | MCP connection fails | Confirm Compose is healthy and `AGNTID_MCP_URL` uses the published MCP port. |
-| `demo_add_numbers` is absent | Review the runtime profile, tool classification, individual state, runtime sync, and OAuth role grants. |
+| `demo_add_numbers` is absent | Enable Demo tools, confirm Catalog verified, approve `demo.add_numbers`, then confirm runtime scope sync and OAuth role grants. |
 | A call is denied | Read the Reporting event and policy reason; do not retry with altered identity or hidden arguments. |
 | OAuth returns 401 | Confirm the token is current, issued for the AgntID protected resource, and exported without the `Bearer` prefix. |
 
