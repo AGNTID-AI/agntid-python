@@ -157,7 +157,11 @@ export AGNTID_ACCESS_TOKEN='<current OAuth access token>'
 
 A successful response includes `mode: "direct-smoke"`, `result`, `task_id`, and
 `visible_tool_count`. Use `task_id` to find the matching AgntID reporting
-record. Turn direct smoke mode off after the check.
+record. A policy denial is still a completed HTTP invocation, but returns
+`denied: true`, `result: null`, and a small `denial` object with stable `code`,
+user-safe `message`, and `correlation_id` fields. Raw AgntID execution metadata
+is retained in Reporting/logs and is not returned in this response. Turn direct
+smoke mode off after the check.
 
 ## Run the LangGraph agent locally
 

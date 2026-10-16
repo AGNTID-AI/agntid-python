@@ -45,7 +45,38 @@ def test_legacy_denial_parser_exposes_typed_review():
     message, info = parse_denial_from_exception(_exception())
     assert message.startswith("Tool call waiting for AgntID review")
     assert info["outcome"] == "review_required"
+    assert info["correlation_id"] == "corr-123"
     assert info["review"].review_id == "review-123"
+
+
+def test_denial_parser_accepts_transport_text_after_json_envelope():
+    wrapped = ValueError(str(_exception()) + " (tool execution failed)")
+
+    message, info = parse_denial_from_exception(wrapped)
+
+    assert message.startswith("Tool call waiting for AgntID review")
+    assert info["verdict_code"] == "APPROVAL_REQUIRED"
+    assert info["correlation_id"] == "corr-123"
+
+
+def test_denial_parser_extracts_only_safe_fields_from_non_json_wrapper():
+    wrapped = RuntimeError(
+        "ToolError({'__agntid_execution_flow': {'private': 'metadata'}, "
+        "'__agntid_error': 'Policy denied the request. "
+        "[POLICY_DENIED; correlation_id=corr-safe-456]'})"
+    )
+
+    message, info = parse_denial_from_exception(wrapped)
+
+    assert message == "Tool call denied: Policy denied the request."
+    assert info == {
+        "reason": "Policy denied the request.",
+        "policy_name": "",
+        "error": "Policy denied the request.",
+        "outcome": "deny",
+        "verdict_code": "POLICY_DENIED",
+        "correlation_id": "corr-safe-456",
+    }
 
 
 def test_argument_digest_is_order_independent():

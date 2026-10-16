@@ -1,3 +1,4 @@
+import json
 from types import SimpleNamespace
 
 import pytest
@@ -9,8 +10,9 @@ from agntid_agentcore.service import AgentCoreService
 
 
 class FakeMCPClient:
-    def __init__(self):
+    def __init__(self, *, deny=False):
         self.events = []
+        self.deny = deny
 
     async def __aenter__(self):
         self.events.append(("connect",))
@@ -52,6 +54,27 @@ class FakeMCPClient:
         if name == "agntid_task_close":
             return {"ok": True}
         if name == "demo_add_numbers":
+            if self.deny:
+                payload = {
+                    "__agntid_error": "POLICY_DENIED",
+                    "__agntid_policy_decision": {
+                        "allowed": False,
+                        "reason": "Input is outside the approved range.",
+                        "policy_name": "demo-add-range",
+                        "correlation_id": "corr-denied-123",
+                        "intent_validation": {
+                            "status": "denied",
+                            "verdict": "deny",
+                            "verdict_code": "POLICY_DENIED",
+                        },
+                    },
+                    "__agntid_execution_flow": {
+                        "denial_step": "policy_evaluation",
+                        "operation_id": "operation-private",
+                        "session_id": "session-private",
+                    },
+                }
+                raise RuntimeError("Error calling tool: " + json.dumps(payload))
             return {
                 "__agntid_result": {
                     "sum": arguments["first_number"] + arguments["second_number"]
@@ -147,6 +170,43 @@ async def test_direct_smoke_exercises_task_and_tool_without_model_or_aws():
 
     assert response["result"] == {"sum": 33}
     assert response["mode"] == "direct-smoke"
+
+
+@pytest.mark.asyncio
+async def test_direct_smoke_returns_safe_structured_denial():
+    client = FakeMCPClient(deny=True)
+
+    async def model_must_not_run(*args):
+        raise AssertionError("model path ran")
+
+    service = AgentCoreService(
+        settings(direct=True),
+        lambda _url, _token: client,
+        model_must_not_run,
+    )
+    response = await service.invoke(
+        {
+            "prompt": "Denied deterministic smoke",
+            "direct_tool": {
+                "name": "demo_add_numbers",
+                "arguments": {"first_number": 50, "second_number": 21},
+            },
+        },
+        context(),
+    )
+
+    assert response["result"] is None
+    assert response["denied"] is True
+    assert response["mode"] == "direct-smoke"
+    assert response["denial"] == {
+        "code": "POLICY_DENIED",
+        "message": "Input is outside the approved range.",
+        "correlation_id": "corr-denied-123",
+    }
+    serialized = json.dumps(response)
+    assert "__agntid_" not in serialized
+    assert "operation-private" not in serialized
+    assert "session-private" not in serialized
 
 
 @pytest.mark.asyncio

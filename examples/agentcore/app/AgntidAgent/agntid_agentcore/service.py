@@ -58,6 +58,24 @@ def _plain_result(value: Any) -> Any:
     return str(value)
 
 
+def _safe_denial(denial: Mapping[str, Any]) -> dict[str, str | None]:
+    outcome = str(denial.get("outcome") or "").strip().lower()
+    code = str(denial.get("verdict_code") or "").strip()
+    if not code:
+        code = "REVIEW_REQUIRED" if outcome == "review_required" else "POLICY_DENIED"
+
+    reason = str(denial.get("reason") or "").strip()
+    if not reason or "__agntid_" in reason or reason.startswith("{"):
+        reason = "AgntID denied the tool call."
+
+    correlation_id = str(denial.get("correlation_id") or "").strip() or None
+    return {
+        "code": code,
+        "message": reason,
+        "correlation_id": correlation_id,
+    }
+
+
 def _payload_prompt(payload: Any) -> str:
     if not isinstance(payload, Mapping):
         raise InvocationError(400, "The invocation payload must be a JSON object.")
@@ -142,7 +160,7 @@ class AgentCoreService:
 
                 denial = agntid.get_last_denial(clear=True)
                 response = {
-                    "result": _plain_result(output),
+                    "result": None if denial else _plain_result(output),
                     "task_id": task_id,
                     "mode": mode,
                     "denied": bool(denial),
@@ -151,5 +169,5 @@ class AgentCoreService:
                 if session_id:
                     response["session_id"] = session_id
                 if denial:
-                    response["denial"] = agntid.format_denial(denial)
+                    response["denial"] = _safe_denial(denial)
                 return response

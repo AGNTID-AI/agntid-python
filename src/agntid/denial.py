@@ -9,6 +9,7 @@ meaningful fields and provides clean, human-readable messages for any agent fram
 from __future__ import annotations
 
 import json
+import re
 import threading
 from typing import Any
 
@@ -49,19 +50,37 @@ def _extract_json_from_message(msg: str) -> dict[str, Any] | None:
       - Prefixed: "Error calling tool 'foo': {JSON}"
     Returns the parsed dict or None.
     """
-    try:
-        payload = json.loads(msg)
-        return payload if isinstance(payload, dict) else None
-    except (json.JSONDecodeError, TypeError, ValueError):
-        pass
-    idx = msg.find("{")
-    if idx > 0:
+    decoder = json.JSONDecoder()
+    for candidate in (msg.strip(), msg[msg.find("{") :] if "{" in msg else ""):
+        if not candidate:
+            continue
         try:
-            payload = json.loads(msg[idx:])
+            payload, _ = decoder.raw_decode(candidate)
             return payload if isinstance(payload, dict) else None
         except (json.JSONDecodeError, TypeError, ValueError):
             pass
     return None
+
+
+_SAFE_CLIENT_ERROR = re.compile(
+    r"(?P<message>(?:Policy|Intent|Execution|Tool)[^\"{}\[\]\n]{1,200}?)\s*"
+    r"\[(?P<code>[A-Z][A-Z0-9_]*);\s*correlation_id="
+    r"(?P<correlation_id>[A-Za-z0-9_.:-]+)\]"
+)
+
+
+def _safe_client_error_fields(message: str) -> dict[str, str] | None:
+    match = _SAFE_CLIENT_ERROR.search(message)
+    if match is None:
+        return None
+    return {
+        "reason": match.group("message").strip(),
+        "policy_name": "",
+        "error": match.group("message").strip(),
+        "outcome": "deny",
+        "verdict_code": match.group("code"),
+        "correlation_id": match.group("correlation_id"),
+    }
 
 
 def parse_denial_from_exception(exc: BaseException) -> tuple[str, dict[str, Any] | None]:
@@ -76,6 +95,9 @@ def parse_denial_from_exception(exc: BaseException) -> tuple[str, dict[str, Any]
     msg = str(exc).strip()
     payload = _extract_json_from_message(msg)
     if payload is None:
+        safe_error = _safe_client_error_fields(msg)
+        if safe_error is not None:
+            return (f"Tool call denied: {safe_error['reason']}", safe_error)
         return (msg, None)
     err = payload.get("__agntid_error", "")
     policy = payload.get("__agntid_policy_decision")
@@ -93,6 +115,7 @@ def parse_denial_from_exception(exc: BaseException) -> tuple[str, dict[str, Any]
         if decision is not None:
             denial_info["outcome"] = decision.outcome.value
             denial_info["verdict_code"] = decision.code
+            denial_info["correlation_id"] = decision.correlation_id
             denial_info["intent_status"] = decision.intent_status
             if decision.review is not None:
                 denial_info["review"] = decision.review
@@ -113,6 +136,9 @@ def parse_denial_from_exception(exc: BaseException) -> tuple[str, dict[str, Any]
         user_msg = ". ".join(parts) + "."
         return (user_msg, denial_info)
     if err:
+        safe_error = _safe_client_error_fields(str(err))
+        if safe_error is not None:
+            return (f"Tool call denied: {safe_error['reason']}", safe_error)
         return (f"Tool call failed: {err}", None)
     return (msg, None)
 
