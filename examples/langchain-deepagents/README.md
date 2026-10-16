@@ -147,6 +147,11 @@ OpenAI, an AgntID runtime, or an access token. The deterministic
 `framework-smoke` and `delegation-smoke` commands do connect to the configured
 AgntID runtime.
 
+`framework-smoke` is an expected-success check. A runtime denial or blocked
+event (including `policy_allowed: false`) keeps the AgntID policy and
+correlation diagnostics visible, suppresses the deterministic completion
+claim, and exits nonzero. A completed run with no denial exits zero.
+
 For the detailed design and broader experiment set, see
 [architecture](docs/architecture.md), [scenarios](docs/scenarios.md), and the
 [engineering demo](docs/engineering-demo.md).
@@ -161,9 +166,9 @@ For the detailed design and broader experiment set, see
   before running the example.
 - Model authentication errors: `OPENAI_API_KEY` is required only by
   `ops-chat`, `langchain`, and `deepagents`; the safe evaluation does not use it.
-- A denied tool call is not necessarily an example failure. Check the displayed
-  AgntID policy reason and correlation ID; some diagnostic scenarios
-  intentionally exercise denial paths.
+- A denial from `framework-smoke` is a failed expected-success check. Other
+  diagnostic scenarios may intentionally exercise denial paths; check their
+  displayed AgntID policy reason and correlation ID.
 - Never derive `--user-id`, `--agent-id`, delegation scope, or approval evidence
   from model output. Production services must load them from verified sessions
   and trusted deployment configuration.

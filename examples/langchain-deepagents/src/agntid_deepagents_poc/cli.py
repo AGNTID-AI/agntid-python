@@ -179,6 +179,25 @@ class _ToolCallingFakeModel(FakeMessagesListChatModel):
         return self
 
 
+class FrameworkSmokeFailed(RuntimeError):
+    """Raised when an expected-success framework smoke is denied."""
+
+
+def _framework_smoke_failure(events: list[dict[str, Any]]) -> str | None:
+    for event in events:
+        status = str(event.get("status") or "").strip().lower()
+        if status in {"denied", "blocked"} or event.get("policy_allowed") is False:
+            reason = str(event.get("denial_reason") or "Policy denied the request.")
+            correlation_id = str(event.get("correlation_id") or "").strip()
+            correlation = (
+                f" Correlation ID: {correlation_id}."
+                if correlation_id and correlation_id not in reason
+                else ""
+            )
+            return f"Expected protected tool call was denied: {reason}{correlation}"
+    return None
+
+
 async def _framework_smoke(args: argparse.Namespace, console: Console) -> None:
     prompt = f"Please add {args.first:g} and {args.second:g}"
     model = _ToolCallingFakeModel(
@@ -207,6 +226,11 @@ async def _framework_smoke(args: argparse.Namespace, console: Console) -> None:
             bridge=bridge,
             context=context,
         )
+    failure = _framework_smoke_failure(events)
+    if failure is not None:
+        for event in events:
+            print_event(console, event)
+        raise FrameworkSmokeFailed(failure)
     console.print(Panel(answer, title=f"{args.framework} deterministic answer"))
     for event in events:
         print_event(console, event)
