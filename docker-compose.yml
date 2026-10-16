@@ -54,6 +54,8 @@ services:
       - RUSE_SERVER_PORT=8080
       - RUSE_STORAGE_PATH=/data/ruse.db
       - RUSE_MCP_ENABLED=true
+      - RUNTIME_CONTROL_CHANNEL_ENABLED=${RUNTIME_CONTROL_CHANNEL_ENABLED:-false}
+      - MCP_DOWNSTREAM_OAUTH_ENABLED=${MCP_DOWNSTREAM_OAUTH_ENABLED:-false}
       - RUSE_MCP_TRANSPORT=http
       - RUSE_MCP_PORT=8000
       - RUSE_MCP_EXTERNAL_PORT=${MCP_PORT:-8082}
@@ -68,7 +70,7 @@ services:
       - INTENT_PARSER_V2_CLASSIFY_URL=http://achr-intent-parser:8000
       - INTENT_PARSER_V2_CLASSIFY_TIMEOUT_MS=${INTENT_PARSER_V2_CLASSIFY_TIMEOUT_MS:-10000}
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8080/ready"]
       interval: 30s
       timeout: 10s
       retries: 3
