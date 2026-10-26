@@ -15,8 +15,9 @@
 #
 # After startup, open http://localhost:8080 and enter your bootstrap token.
 #
-# Intent parser: first start downloads the ML model (~900 MB) into the intent-parser-model
-# volume; subsequent starts use the cache. First-time startup can take several minutes.
+# Intent protection is optional and uses a customer-owned OpenAI credential selected
+# in the portal. Normal startup requires no local model or ML container.
+# The legacy-ml profile is retained only for explicitly enabled research.
 # MCP package managers: npx/uvx caches are persisted in runtime-mcp-cache so
 # customer-added MCP servers are not re-downloaded after container recreation.
 # Version: 2.0.0
@@ -60,6 +61,7 @@ services:
       - RUSE_STORAGE_PATH=/data/ruse.db
       - RUSE_MCP_ENABLED=true
       - RUNTIME_CONTROL_CHANNEL_ENABLED=${RUNTIME_CONTROL_CHANNEL_ENABLED:-false}
+      - AGNTID_LEGACY_ML_RESEARCH=${AGNTID_LEGACY_ML_RESEARCH:-false}
       - MCP_DOWNSTREAM_OAUTH_ENABLED=${MCP_DOWNSTREAM_OAUTH_ENABLED:-false}
       - RUSE_MCP_TRANSPORT=http
       - RUSE_MCP_PORT=8000
@@ -72,19 +74,14 @@ services:
       # Uncomment together with the docker.sock mount above so Docker SDKs and
       # docker CLI based MCP servers use the mounted host Docker daemon.
       # - DOCKER_HOST=unix:///var/run/docker.sock
-      - INTENT_PARSER_V2_CLASSIFY_URL=http://achr-intent-parser:8000
-      - INTENT_PARSER_V2_CLASSIFY_TIMEOUT_MS=${INTENT_PARSER_V2_CLASSIFY_TIMEOUT_MS:-10000}
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/ready"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
-    depends_on:
-      achr-intent-parser:
-        condition: service_healthy
-
   achr-intent-parser:
+    profiles: ["legacy-ml"]
     image: ${ACHR_INTENT_PARSER_IMAGE:-ghcr.io/agntid-ai/intent-parser-ml:main}
     restart: unless-stopped
     logging:
