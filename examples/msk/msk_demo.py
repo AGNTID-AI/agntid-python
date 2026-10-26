@@ -89,7 +89,7 @@ async def run(args: argparse.Namespace):
     user_id = args.user_id
 
     kernel = Kernel()
-    chat_model = os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-4o")
+    chat_model = os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5.4-mini")
     kernel.add_service(OpenAIChatCompletion(ai_model_id=chat_model, service_id="chat"))
     settings = kernel.get_prompt_execution_settings_from_service_id(service_id="chat")
     settings.function_choice_behavior = FunctionChoiceBehavior.Auto()

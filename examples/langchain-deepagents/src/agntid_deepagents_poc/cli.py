@@ -109,7 +109,7 @@ def _parser() -> argparse.ArgumentParser:
         "ops-chat",
         help="Interactive memory + subagents + approval Deep Agent chat",
     )
-    ops_chat.add_argument("--model", default=os.getenv("MODEL", "openai:gpt-4.1-mini"))
+    ops_chat.add_argument("--model", default=os.getenv("MODEL", "openai:gpt-5.4-mini"))
     ops_chat.add_argument("--state-dir", default=".demo_state")
     ops_chat.add_argument("--organization-id", default="demo-platform-org")
     ops_chat.add_argument("--roles", default="incident-operator")
@@ -122,7 +122,7 @@ def _parser() -> argparse.ArgumentParser:
     for name in ("langchain", "deepagents"):
         agent = commands.add_parser(name, help=f"Run the {name} agent POC")
         agent.add_argument("prompt", nargs="?", default="Please add 11 and 22")
-        agent.add_argument("--model", default=os.getenv("MODEL", "openai:gpt-4.1-mini"))
+        agent.add_argument("--model", default=os.getenv("MODEL", "openai:gpt-5.4-mini"))
     return parser
 
 

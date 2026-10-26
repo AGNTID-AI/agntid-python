@@ -71,7 +71,7 @@ async def run(args: argparse.Namespace):
     mcp_url = env["AGNTID_MCP_URL"]
     registered_id = args.agent_name
     user_id = args.user_id
-    chat_model = os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-4o")
+    chat_model = os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5.4-mini")
 
     openai_client = OpenAI()
 

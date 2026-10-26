@@ -85,7 +85,7 @@ Set the model configuration:
 
 ```bash
 export OPENAI_API_KEY='<OpenAI API key>'
-export OPENAI_CHAT_MODEL_ID=gpt-4o
+export OPENAI_CHAT_MODEL_ID=gpt-5.4-mini
 ```
 
 Use a model available to your account, then start the example:
